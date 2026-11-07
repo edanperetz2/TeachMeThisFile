@@ -4,7 +4,7 @@ import { useApiKey } from './settings/useApiKey.js'
 
 export default function App() {
   const [apiKey, setApiKey] = useApiKey()
-  const { lesson, startLesson } = useLesson()
+  const { lesson, startLesson } = useLesson(apiKey)
 
   return (
     <SetupScreen
