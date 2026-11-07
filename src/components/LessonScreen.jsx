@@ -30,6 +30,13 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
 
       <main ref={scroller} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-3xl space-y-5">
+          {lesson.document.skippedPages.length > 0 && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              Some scanned pages couldn&apos;t be read and are not part of this lesson: page{' '}
+              {lesson.document.skippedPages.join(', ')}.
+            </p>
+          )}
+
           {messages.map((message, i) => (
             <ChatMessage
               key={message.id}

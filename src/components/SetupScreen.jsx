@@ -11,11 +11,15 @@ const BUSY_TEXT = {
   planning: 'Planning the lesson…',
 }
 
-export default function SetupScreen({ status, error, apiKey, onApiKeyChange, onStart }) {
+export default function SetupScreen({ status, error, scanProgress, apiKey, onApiKeyChange, onStart }) {
   const [file, setFile] = useState(null)
   const [teacherPrompt, setTeacherPrompt] = useState('')
 
   const busy = status in BUSY_TEXT
+  const busyText =
+    status === 'extracting' && scanProgress
+      ? `Reading scanned pages: ${scanProgress.done} of ${scanProgress.total} done…`
+      : BUSY_TEXT[status]
   const fileError = file ? fileProblem(file) : null
   const ready = file && !fileError && teacherPrompt.trim() && apiKey
 
@@ -84,7 +88,7 @@ export default function SetupScreen({ status, error, apiKey, onApiKeyChange, onS
             className="flex items-center justify-center gap-3 rounded-xl bg-indigo-50 px-4 py-3 font-medium text-indigo-700"
           >
             <Spinner />
-            {BUSY_TEXT[status]}
+            {busyText}
           </div>
         ) : (
           <>

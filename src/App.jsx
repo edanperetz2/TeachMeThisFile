@@ -16,6 +16,7 @@ export default function App() {
       <SetupScreen
         status={lesson.status}
         error={lesson.error}
+        scanProgress={lesson.scanProgress}
         apiKey={apiKey}
         onApiKeyChange={setApiKey}
         onStart={startLesson}

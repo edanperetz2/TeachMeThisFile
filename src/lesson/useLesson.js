@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef } from 'react'
 import { streamTutorTurn, tutorTurnRequest } from '../ai/chat.js'
+import { readScannedPages } from '../ai/extract.js'
 import { requestPlan } from '../ai/plan.js'
 import { toErrorState } from '../errors.js'
 import { readDocument } from '../files/readDocument.js'
@@ -14,8 +15,13 @@ export function useLesson(apiKey) {
 
   async function startLesson({ file, teacherPrompt }) {
     dispatch({ type: 'EXTRACTION_STARTED', teacherPrompt })
+    const readScanned = (scanned) =>
+      readScannedPages(scanned, {
+        apiKey,
+        onProgress: ({ done, total }) => dispatch({ type: 'SCAN_PROGRESS', done, total }),
+      })
     try {
-      const document = await readDocument(file)
+      const document = await readDocument(file, readScanned)
       dispatch({ type: 'DOCUMENT_READY', document })
       const plan = await requestPlan({ teacherPrompt, passages: document.passages, apiKey })
       dispatch({ type: 'PLAN_READY', plan })

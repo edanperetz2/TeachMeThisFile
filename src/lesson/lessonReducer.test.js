@@ -59,6 +59,14 @@ describe('setup flow', () => {
     expect(state.progress.map((p) => p.status)).toEqual(['active', 'pending'])
   })
 
+  it('tracks progress while scanned pages are read, and resets it for a new lesson', () => {
+    let state = lessonReducer(initialLessonState, { type: 'EXTRACTION_STARTED', teacherPrompt: 'x' })
+    state = lessonReducer(state, { type: 'SCAN_PROGRESS', done: 4, total: 12 })
+    expect(state.scanProgress).toEqual({ done: 4, total: 12 })
+    state = lessonReducer(state, { type: 'EXTRACTION_STARTED', teacherPrompt: 'y' })
+    expect(state.scanProgress).toBeNull()
+  })
+
   it('records extraction and planning errors', () => {
     const error = { code: 'INVALID_KEY', message: 'Bad key' }
     const state = lessonReducer(plannedLesson(), { type: 'FAILED', error })

@@ -10,6 +10,7 @@ export const initialLessonState = {
   // What is in flight right now: idle | extracting | planning | streaming | done | error
   status: 'idle',
   error: null, // { code, message } while status is 'error'
+  scanProgress: null, // { done, total } while scanned pages are being read
   teacherPrompt: '',
   document: null, // { fileName, passages: [{ id, text, page }] }
   plan: null, // { language, steps: [{ title, objective, passageIds, question }] }
@@ -31,6 +32,9 @@ export function lessonReducer(state, action) {
         status: 'extracting',
         teacherPrompt: action.teacherPrompt,
       }
+
+    case 'SCAN_PROGRESS':
+      return { ...state, scanProgress: { done: action.done, total: action.total } }
 
     case 'DOCUMENT_READY':
       return { ...state, status: 'planning', document: action.document }

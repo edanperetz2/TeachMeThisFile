@@ -1,15 +1,21 @@
 import { AppError } from '../errors.js'
+import { imageFileToJpeg } from './images.js'
 import { splitIntoPassages } from './passages.js'
 
 // Below this much real text we say the file has nothing to teach.
 const MIN_TEXT_CHARS = 20
 
-// File → { fileName, passages, skippedPages }. Runs entirely in the browser,
-// so the file itself is never uploaded; only its text is sent later.
-export async function readDocument(file) {
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+
+// File → { fileName, passages, skippedPages }. Text is read in the browser, so the file
+// itself is never uploaded. Pages that are images (scans, photos) are handed to
+// readScannedPages, which returns { pages: [{ page, text }], skippedPages }.
+export async function readDocument(file, readScannedPages) {
   const pages = await readPages(file)
-  const usable = pages.filter((p) => !p.scanned)
-  const text = usable.map((p) => p.text).join('\n')
+  const scanned = pages.filter((p) => p.image)
+  const ocr = scanned.length > 0 ? await readScannedPages(scanned) : { pages: [], skippedPages: [] }
+  const textPages = pages.flatMap((p) => (p.image ? ocr.pages.filter((o) => o.page === p.page) : [p]))
+  const text = textPages.map((p) => p.text).join('\n')
 
   if (looksBinary(text)) {
     throw new AppError('UNREADABLE', "This file doesn't look like readable text. Try a PDF, Word or text file.")
@@ -20,11 +26,12 @@ export async function readDocument(file) {
 
   return {
     fileName: file.name,
-    passages: splitIntoPassages(usable),
-    skippedPages: pages.filter((p) => p.scanned).map((p) => p.page),
+    passages: splitIntoPassages(textPages),
+    skippedPages: ocr.skippedPages,
   }
 }
 
+// → [{ page, text }] or [{ page, image }]. page is null for files without pages.
 // The PDF and Word readers are large, so each is loaded only when such a file is picked.
 async function readPages(file) {
   const extension = file.name.toLowerCase().split('.').pop()
@@ -36,8 +43,18 @@ async function readPages(file) {
     const { readDocxText } = await import('./readDocx.js')
     return [{ page: null, text: await readDocxText(file) }]
   }
-  if (extension === 'txt' || extension === 'md') return [{ page: null, text: await file.text() }]
-  throw new AppError('UNSUPPORTED', 'Images are not supported yet.')
+  if (IMAGE_EXTENSIONS.includes(extension)) {
+    return [{ page: null, image: await readImage(file) }]
+  }
+  return [{ page: null, text: await file.text() }]
+}
+
+async function readImage(file) {
+  try {
+    return await imageFileToJpeg(file)
+  } catch {
+    throw new AppError('UNREADABLE', "We couldn't open this image. Try a JPG or PNG file.")
+  }
 }
 
 // A renamed binary file decodes to lots of replacement and control characters.

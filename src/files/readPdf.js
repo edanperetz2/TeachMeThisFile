@@ -1,6 +1,7 @@
 import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { AppError } from '../errors.js'
+import { canvasToJpeg, MAX_IMAGE_SIDE } from './images.js'
 
 // Vite bundles the worker as its own file and gives us its URL (works in dev and in the build).
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -17,7 +18,8 @@ const IMAGE_OPS = new Set([
 const RTL_CHARS = /[֐-ࣿיִ-﷿ﹰ-﻿]/g
 const LTR_CHARS = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]/g
 
-// → [{ page, text, scanned }] using the PDF's own text layer.
+// → [{ page, text }] from the PDF's own text layer, or [{ page, image }] (a base64
+// JPEG to be read by the AI) for scanned pages that have no usable text layer.
 export async function readPdfPages(file) {
   const pdf = await openPdf(file)
   const pages = []
@@ -25,9 +27,19 @@ export async function readPdfPages(file) {
     const pdfPage = await pdf.getPage(page)
     const text = await pageText(pdfPage)
     const scanned = text.replace(/\s/g, '').length < SCANNED_PAGE_CHARS && (await hasImage(pdfPage))
-    pages.push({ page, text, scanned })
+    pages.push(scanned ? { page, image: await renderPage(pdfPage) } : { page, text })
   }
   return pages
+}
+
+async function renderPage(page) {
+  const { width, height } = page.getViewport({ scale: 1 })
+  const viewport = page.getViewport({ scale: MAX_IMAGE_SIDE / Math.max(width, height) })
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(viewport.width)
+  canvas.height = Math.round(viewport.height)
+  await page.render({ canvas, viewport }).promise
+  return canvasToJpeg(canvas)
 }
 
 async function openPdf(file) {
