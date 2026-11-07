@@ -4,13 +4,15 @@ import { readScannedPages } from '../ai/extract.js'
 import { requestPlan } from '../ai/plan.js'
 import { toErrorState } from '../errors.js'
 import { readDocument } from '../files/readDocument.js'
-import { initialLessonState, lessonReducer } from './lessonReducer.js'
+import { lessonReducer } from './lessonReducer.js'
+import { loadLesson, saveLesson } from './savedLesson.js'
 import { needsOpeningTurn } from './selectors.js'
 
 // Connects the lesson store to file reading and the AI calls. The UI only calls
 // these functions; it never talks to the network or changes lesson state directly.
 export function useLesson(apiKey) {
-  const [lesson, dispatch] = useReducer(lessonReducer, initialLessonState)
+  // A lesson in progress is restored after a reload of this tab.
+  const [lesson, dispatch] = useReducer(lessonReducer, undefined, loadLesson)
   const turnController = useRef(null)
 
   async function startLesson({ file, teacherPrompt }) {
@@ -55,6 +57,8 @@ export function useLesson(apiKey) {
   useEffect(() => {
     if (needsOpeningTurn(lesson)) runTurn(null)
   }, [lesson])
+
+  useEffect(() => saveLesson(lesson), [lesson])
 
   function sendMessage(text) {
     if (lesson.status === 'idle' && text.trim()) runTurn(text.trim())
