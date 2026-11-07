@@ -101,6 +101,9 @@ function situation({ plan, stepIndex, opening, lastAttempt }) {
   }
   if (lastAttempt) {
     notes.push('The student has tried this step several times. If this answer is still not right, explain the answer clearly and kindly in 2-3 sentences, without asking another question, and set advance to true.')
+  } else if (!opening) {
+    // Rules in the system prompt alone were not enough: the model still revealed answers.
+    notes.push("If the student's answer is wrong or incomplete, do not say the right answer, not even inside a hint: give a hint or ask an easier question.")
   }
   if (stepIndex === plan.steps.length - 1) {
     notes.push('This is the last step. When you set advance to true, end with a short recap of the whole lesson (3-4 bullet points) and a word of encouragement.')

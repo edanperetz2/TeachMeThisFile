@@ -72,6 +72,11 @@ describe('buildChatRequest', () => {
     expect(system).toContain('<<<CONTROL>>>')
   })
 
+  it('reminds the tutor not to reveal the answer to a wrong attempt', () => {
+    const request = buildChatRequest(input({ opening: false, messages: [{ role: 'student', text: 'a molecule?' }] }))
+    expect(request.contents.at(-1).parts[0].text).toContain('do not say the right answer')
+  })
+
   it('asks for a recap on the last step and a move-on after the last attempt', () => {
     const request = buildChatRequest(input({ stepIndex: 1, opening: false, lastAttempt: true, messages: [{ role: 'student', text: 'no idea' }] }))
     const note = request.contents.at(-1).parts[0].text
