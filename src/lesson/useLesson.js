@@ -26,7 +26,7 @@ export function useLesson(apiKey) {
       const document = await readDocument(file, readScanned)
       dispatch({ type: 'DOCUMENT_READY', document })
       const plan = await requestPlan({ teacherPrompt, passages: document.passages, apiKey })
-      dispatch({ type: 'PLAN_READY', plan })
+      dispatch({ type: 'PLAN_READY', plan, at: Date.now() })
     } catch (error) {
       dispatch({ type: 'FAILED', error: toErrorState(error) })
     }
@@ -46,7 +46,7 @@ export function useLesson(apiKey) {
         signal: controller.signal,
         onText: (text) => dispatch({ type: 'TEXT_RECEIVED', text }),
       })
-      dispatch({ type: 'TURN_FINISHED', control })
+      dispatch({ type: 'TURN_FINISHED', control, at: Date.now() })
     } catch (error) {
       if (error.name === 'AbortError') dispatch({ type: 'TURN_STOPPED' })
       else dispatch({ type: 'TURN_FAILED', error: toErrorState(error) })

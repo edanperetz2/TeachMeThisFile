@@ -4,6 +4,7 @@ import ApiKeyField from './ApiKeyField.jsx'
 import ChatMessage from './ChatMessage.jsx'
 import Composer from './Composer.jsx'
 import LessonHeader from './LessonHeader.jsx'
+import LessonReport from './LessonReport.jsx'
 import SourcePanel from './SourcePanel.jsx'
 
 // Errors that a new key can fix, so the key field is offered right in the lesson.
@@ -55,21 +56,7 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
             />
           ))}
 
-          {status === 'done' && (
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-center">
-              <p className="font-semibold text-indigo-900">Lesson complete</p>
-              <p className="mt-1 text-sm text-indigo-800">
-                You worked through all {plan.steps.length} steps. Nice work!
-              </p>
-              <button
-                type="button"
-                onClick={onNewLesson}
-                className="mt-4 rounded-xl bg-indigo-600 px-4 py-2.5 font-medium text-white hover:bg-indigo-700"
-              >
-                Start a new lesson
-              </button>
-            </div>
-          )}
+          {status === 'done' && <LessonReport lesson={lesson} onNewLesson={onNewLesson} />}
         </div>
       </main>
 

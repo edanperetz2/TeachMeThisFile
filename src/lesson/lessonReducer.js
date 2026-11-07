@@ -15,7 +15,7 @@ export const initialLessonState = {
   document: null, // { fileName, passages: [{ id, text, page }] }
   plan: null, // { language, steps: [{ title, objective, passageIds, question }] }
   currentStepIndex: 0,
-  progress: [], // one per plan step: { status: pending | active | done, attempts, understood }
+  progress: [], // one per plan step: { status: pending | active | done, attempts, understood, startedAt, finishedAt }
   messages: [], // { id, role: tutor | student, text, stepIndex, passageIds, stopped }
 }
 
@@ -49,6 +49,8 @@ export function lessonReducer(state, action) {
           status: i === 0 ? 'active' : 'pending',
           attempts: 0,
           understood: null,
+          startedAt: i === 0 ? action.at : null, // times come in the action, so the reducer stays pure
+          finishedAt: null,
         })),
       }
 
@@ -68,7 +70,7 @@ export function lessonReducer(state, action) {
       return updateLastMessage(state, (m) => ({ ...m, text: action.text }))
 
     case 'TURN_FINISHED':
-      return finishTurn(state, action.control)
+      return finishTurn(state, action.control, action.at)
 
     case 'TURN_STOPPED':
       // Student pressed Stop: keep the partial text, no attempt, no advance.
@@ -96,7 +98,7 @@ export function lessonReducer(state, action) {
   }
 }
 
-function finishTurn(state, control) {
+function finishTurn(state, control, at) {
   const index = state.currentStepIndex
   const step = state.plan.steps[index]
   const stepProgress = state.progress[index]
@@ -117,8 +119,8 @@ function finishTurn(state, control) {
   const isLastStep = index === state.plan.steps.length - 1
 
   const progress = state.progress.map((p, i) => {
-    if (i === index) return { attempts, understood, status: advance ? 'done' : 'active' }
-    if (i === index + 1 && advance) return { ...p, status: 'active' }
+    if (i === index) return { ...p, attempts, understood, status: advance ? 'done' : 'active', finishedAt: advance ? at : null }
+    if (i === index + 1 && advance) return { ...p, status: 'active', startedAt: at }
     return p
   })
 

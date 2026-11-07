@@ -120,7 +120,7 @@ describe('advancing', () => {
   it('advances when the control signal says so', () => {
     const state = turn(turn(plannedLesson(), null, noAdvance), 'answer', advance)
     expect(state.currentStepIndex).toBe(1)
-    expect(state.progress[0]).toEqual({ status: 'done', attempts: 1, understood: 'yes' })
+    expect(state.progress[0]).toMatchObject({ status: 'done', attempts: 1, understood: 'yes' })
     expect(state.progress[1].status).toBe('active')
   })
 
@@ -128,6 +128,18 @@ describe('advancing', () => {
     const state = turn(plannedLesson(), null, advance)
     expect(state.currentStepIndex).toBe(0)
     expect(state.progress[0].status).toBe('active')
+  })
+
+  it('records when each step starts and finishes', () => {
+    let state = lessonReducer(plannedLesson(), { type: 'PLAN_READY', plan, at: 1000 })
+    state = run(
+      state,
+      { type: 'TURN_STARTED', studentText: 'answer' },
+      { type: 'TEXT_RECEIVED', text: 'Right!' },
+      { type: 'TURN_FINISHED', control: advance, at: 61000 },
+    )
+    expect(state.progress[0]).toMatchObject({ startedAt: 1000, finishedAt: 61000 })
+    expect(state.progress[1]).toMatchObject({ startedAt: 61000, finishedAt: null })
   })
 
   it('does not advance when the control signal is missing', () => {
@@ -145,7 +157,7 @@ describe('advancing', () => {
     expect(isLastAttempt(state)).toBe(true)
     state = turn(state, 'wrong 3', noAdvance)
     expect(state.currentStepIndex).toBe(1)
-    expect(state.progress[0]).toEqual({ status: 'done', attempts: 3, understood: 'no' })
+    expect(state.progress[0]).toMatchObject({ status: 'done', attempts: 3, understood: 'no' })
   })
 
   it('finishes the lesson after the last step', () => {
