@@ -57,7 +57,7 @@ export default function SetupScreen({ status, error, scanProgress, apiKey, onApi
                 placeholder={EXAMPLE_PROMPT}
                 rows={3}
                 dir="auto"
-                className="mt-2 w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-2 w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-base outline-none sm:text-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
               {!teacherPrompt && (
                 <button

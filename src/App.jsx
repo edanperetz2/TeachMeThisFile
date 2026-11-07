@@ -34,6 +34,8 @@ export default function App() {
     >
       <LessonScreen
         lesson={lesson}
+        apiKey={apiKey}
+        onApiKeyChange={setApiKey}
         onSend={sendMessage}
         onStop={stopTurn}
         onRetry={retryTurn}

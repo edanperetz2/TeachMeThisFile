@@ -6,7 +6,7 @@ export default function ChatMessage({ message, streaming, onShowSource }) {
       <div className="flex justify-end">
         <p
           dir="auto"
-          className="max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 whitespace-pre-wrap text-white"
+          className="max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 whitespace-pre-wrap text-white [overflow-wrap:anywhere]"
         >
           {message.text}
         </p>

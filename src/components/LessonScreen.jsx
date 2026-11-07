@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { sourcePassages } from '../lesson/selectors.js'
+import ApiKeyField from './ApiKeyField.jsx'
 import ChatMessage from './ChatMessage.jsx'
 import Composer from './Composer.jsx'
 import LessonHeader from './LessonHeader.jsx'
 import SourcePanel from './SourcePanel.jsx'
 
-export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLesson }) {
+// Errors that a new key can fix, so the key field is offered right in the lesson.
+const KEY_ERRORS = ['INVALID_KEY', 'QUOTA_EXCEEDED']
+
+export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, onStop, onRetry, onNewLesson }) {
   const [sourceMessage, setSourceMessage] = useState(null)
   const closeSource = useCallback(() => setSourceMessage(null), [])
   const { plan, progress, currentStepIndex, messages, status, error } = lesson
@@ -18,6 +22,11 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) el.scrollTop = el.scrollHeight
   }, [messages.length, lastText])
 
+  // A stray tap on "New lesson" shouldn't throw away a lesson in progress.
+  function leaveLesson() {
+    if (status === 'done' || window.confirm('Leave this lesson? Your progress will be lost.')) onNewLesson()
+  }
+
   return (
     <div className="flex h-dvh flex-col bg-slate-50">
       <LessonHeader
@@ -25,7 +34,7 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
         progress={progress}
         currentStepIndex={currentStepIndex}
         finished={status === 'done'}
-        onNewLesson={onNewLesson}
+        onNewLesson={leaveLesson}
       />
 
       <main ref={scroller} className="flex-1 overflow-y-auto px-4 py-6">
@@ -69,16 +78,19 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
           {status === 'error' && (
             <div
               role="alert"
-              className="mx-auto mb-3 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800"
+              className="mx-auto mb-3 max-w-3xl space-y-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800"
             >
-              <span>{error.message}</span>
-              <button
-                type="button"
-                onClick={onRetry}
-                className="shrink-0 rounded-lg bg-white px-3 py-1 font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-              >
-                Retry
-              </button>
+              <div className="flex items-center justify-between gap-3">
+                <span>{error.message}</span>
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="shrink-0 rounded-lg bg-white px-3 py-1 font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                >
+                  Retry
+                </button>
+              </div>
+              {KEY_ERRORS.includes(error.code) && <ApiKeyField value={apiKey} onChange={onApiKeyChange} />}
             </div>
           )}
           <Composer status={status} onSend={onSend} onStop={onStop} />

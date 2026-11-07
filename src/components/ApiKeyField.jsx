@@ -14,11 +14,11 @@ export default function ApiKeyField({ value, onChange }) {
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="AIza…"
+          placeholder="Paste your key here"
           autoComplete="off"
           spellCheck={false}
           dir="ltr"
-          className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pr-16 pl-3 font-mono text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+          className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pr-16 pl-3 font-mono text-base text-slate-900 outline-none sm:text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
         />
         <button
           type="button"
