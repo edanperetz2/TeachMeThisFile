@@ -87,18 +87,24 @@ describe('opening turns', () => {
 })
 
 describe('streaming', () => {
-  it('appends streamed text to the tutor message', () => {
+  it('shows the streamed text so far in the tutor message', () => {
     const state = run(
       plannedLesson(),
       { type: 'TURN_STARTED', studentText: 'Hi' },
       { type: 'TEXT_RECEIVED', text: 'Hel' },
-      { type: 'TEXT_RECEIVED', text: 'lo' },
+      { type: 'TEXT_RECEIVED', text: 'Hello' },
     )
     expect(state.status).toBe('streaming')
     expect(state.messages.map((m) => [m.role, m.text])).toEqual([
       ['student', 'Hi'],
       ['tutor', 'Hello'],
     ])
+  })
+
+  it('ignores events from a turn that is no longer running', () => {
+    const fresh = lessonReducer(plannedLesson(), { type: 'RESET' })
+    expect(lessonReducer(fresh, { type: 'TURN_STOPPED' })).toBe(fresh)
+    expect(lessonReducer(fresh, { type: 'TEXT_RECEIVED', text: 'late' })).toBe(fresh)
   })
 })
 
@@ -108,6 +114,12 @@ describe('advancing', () => {
     expect(state.currentStepIndex).toBe(1)
     expect(state.progress[0]).toEqual({ status: 'done', attempts: 1, understood: 'yes' })
     expect(state.progress[1].status).toBe('active')
+  })
+
+  it("never advances on the tutor's opening message, even if the model says so", () => {
+    const state = turn(plannedLesson(), null, advance)
+    expect(state.currentStepIndex).toBe(0)
+    expect(state.progress[0].status).toBe('active')
   })
 
   it('does not advance when the control signal is missing', () => {

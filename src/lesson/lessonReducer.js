@@ -18,7 +18,12 @@ export const initialLessonState = {
   messages: [], // { id, role: tutor | student, text, stepIndex, passageIds, stopped }
 }
 
+// Events from a turn that is no longer running (e.g. after "New lesson") are ignored.
+const TURN_EVENTS = ['TEXT_RECEIVED', 'TURN_FINISHED', 'TURN_STOPPED', 'TURN_FAILED']
+
 export function lessonReducer(state, action) {
+  if (TURN_EVENTS.includes(action.type) && state.status !== 'streaming') return state
+
   switch (action.type) {
     case 'EXTRACTION_STARTED':
       return {
@@ -55,7 +60,8 @@ export function lessonReducer(state, action) {
     }
 
     case 'TEXT_RECEIVED':
-      return updateLastMessage(state, (m) => ({ ...m, text: m.text + action.text }))
+      // The visible reply so far (the hidden control line is already removed).
+      return updateLastMessage(state, (m) => ({ ...m, text: action.text }))
 
     case 'TURN_FINISHED':
       return finishTurn(state, action.control)
@@ -99,9 +105,10 @@ function finishTurn(state, control) {
   const answeredStudent = state.messages.at(-2)?.role === 'student'
   const attempts = stepProgress.attempts + (answeredStudent ? 1 : 0)
 
+  // Only a reply to the student can finish a step (never the tutor's opening message).
   // A missing or malformed control signal means "don't advance".
   // After MAX_ATTEMPTS the tutor was told to explain and move on, so we advance anyway.
-  const advance = control?.advance === true || attempts >= MAX_ATTEMPTS
+  const advance = answeredStudent && (control?.advance === true || attempts >= MAX_ATTEMPTS)
   const understood = control?.understood ?? stepProgress.understood
   const isLastStep = index === state.plan.steps.length - 1
 
