@@ -13,3 +13,6 @@ dist/
 
 # The assignment brief is private; test PDFs live in test-files/
 /*.pdf
+
+# Local assistant notes, not part of the project
+CLAUDE.md
