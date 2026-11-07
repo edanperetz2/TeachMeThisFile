@@ -27,15 +27,27 @@ export function tutorTurnRequest(lesson, studentText) {
 }
 
 // Streams one tutor reply. onText gets the visible text so far; the return value
-// is the parsed control signal (or null).
+// is the parsed control signal (or null). Now and then the model sends no visible
+// text at all; since the student saw nothing, we quietly ask once more.
 export async function streamTutorTurn({ request, apiKey, signal, onText }) {
+  for (let attempt = 1; ; attempt++) {
+    const { text, control } = splitControl(await readReply(request, apiKey, signal, onText))
+    if (text) {
+      onText(text)
+      return control
+    }
+    if (attempt === 2) throw new AppError('UPSTREAM', "The tutor didn't answer. Please try again.")
+  }
+}
+
+async function readReply(request, apiKey, signal, onText) {
   const response = await postToApi('/api/chat', request, { apiKey, signal })
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
   let raw = ''
   try {
     for (;;) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) return raw
       raw += value
       onText(visibleText(raw))
     }
@@ -43,9 +55,4 @@ export async function streamTutorTurn({ request, apiKey, signal, onText }) {
     if (error.name === 'AbortError') throw error
     throw new AppError('NETWORK', 'The connection was interrupted. Please try again.')
   }
-
-  const { text, control } = splitControl(raw)
-  if (!text) throw new AppError('UPSTREAM', "The tutor didn't answer. Please try again.")
-  onText(text)
-  return control
 }

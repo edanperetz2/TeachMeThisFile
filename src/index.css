@@ -1,1 +1,70 @@
 @import "tailwindcss";
+
+/* Rendered markdown in tutor messages and source passages. Each block picks its own
+   direction from its first letter, so Hebrew/Arabic and English paragraphs can mix. */
+.markdown {
+  overflow-wrap: anywhere;
+
+  & :is(p, ul, ol, pre, table, blockquote, .katex-display) {
+    margin-block: 0.6em;
+  }
+  & > :first-child {
+    margin-top: 0;
+  }
+  & > :last-child {
+    margin-bottom: 0;
+  }
+  & :is(p, li, h1, h2, h3, h4, blockquote, td, th) {
+    unicode-bidi: plaintext;
+    text-align: start;
+  }
+  & :is(h1, h2, h3, h4) {
+    font-weight: 600;
+    margin-block: 0.8em 0.4em;
+  }
+  & ul {
+    list-style: disc;
+    padding-inline-start: 1.4em;
+  }
+  & ol {
+    list-style: decimal;
+    padding-inline-start: 1.4em;
+  }
+  & strong {
+    font-weight: 600;
+  }
+  & a {
+    color: var(--color-indigo-600);
+    text-decoration: underline;
+  }
+  & code {
+    font-size: 0.9em;
+    background: var(--color-slate-100);
+    border-radius: 0.25rem;
+    padding: 0.1em 0.3em;
+  }
+  & table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+  & :is(td, th) {
+    border: 1px solid var(--color-slate-200);
+    padding: 0.3em 0.6em;
+  }
+  & th {
+    background: var(--color-slate-50);
+    font-weight: 600;
+  }
+  /* Formulas always read left to right, even inside a right-to-left paragraph. */
+  & .katex {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  & .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
