@@ -9,6 +9,7 @@ dist/
 .idea/
 .DS_Store
 *.log
+.playwright-mcp/
 
 # The assignment brief is private; test PDFs live in test-files/
 /*.pdf
