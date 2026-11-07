@@ -2,6 +2,8 @@
 
 A teacher uploads a file and writes a prompt; an AI tutor then teaches the file's content to a student in a chat, one step at a time.
 
+Live: https://teach-me-this-files.vercel.app
+
 Edventure AI Engineer home assignment. Stack: React + Vite + Tailwind (JavaScript) front end, Node.js serverless functions in `/api` on Vercel.
 
 ## Run locally
