@@ -2,8 +2,10 @@
 // generateContent and its streaming twin.
 import { ApiError } from './http.js'
 
-// Stable Flash model. (The newer 3.8 Flash was often overloaded on the free tier.)
-export const MODEL = 'gemini-3.6-flash'
+// Tried in order. Free-tier quotas are per model (gemini-3.6-flash allows only 20
+// requests a day), so when a model is busy, out of quota or retired we use the next one.
+export const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.1-flash-lite']
+const TRY_NEXT_MODEL_STATUS = new Set([404, 429, 503])
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
@@ -19,11 +21,22 @@ export function apiKeyFrom(request) {
 }
 
 // Calls Gemini and returns the raw fetch Response (JSON, or an SSE stream when stream is true).
+// Errors arrive before any streamed text, so switching models never mixes two answers.
 export async function generate({ apiKey, body, stream = false, signal }) {
   const method = stream ? 'streamGenerateContent?alt=sse' : 'generateContent'
-  let response
+  let error
+  for (const model of MODELS) {
+    const response = await callModel(`${BASE_URL}/${model}:${method}`, apiKey, body, signal)
+    if (response.ok) return response
+    error = toApiError(response.status, await response.text().catch(() => ''))
+    if (!TRY_NEXT_MODEL_STATUS.has(response.status)) break
+  }
+  throw error
+}
+
+async function callModel(url, apiKey, body, signal) {
   try {
-    response = await fetch(`${BASE_URL}/${MODEL}:${method}`, {
+    return await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
@@ -33,17 +46,21 @@ export async function generate({ apiKey, body, stream = false, signal }) {
     if (error.name === 'TimeoutError') {
       throw new ApiError('TIMEOUT', 'The AI took too long to answer. Please try again.', 504)
     }
+    if (error.name === 'AbortError') throw error // the student pressed Stop
     throw new ApiError('UPSTREAM', "We couldn't reach the AI service. Please try again.", 502)
   }
-  if (!response.ok) {
-    throw toApiError(response.status, await response.text().catch(() => ''))
-  }
-  return response
 }
 
 // Maps a Gemini error to one of the codes the UI understands. The upstream body
 // is only inspected here, never passed on.
 export function toApiError(status, body) {
+  if (status === 429 && body.includes('PerDay')) {
+    return new ApiError(
+      'QUOTA_EXCEEDED',
+      "This API key has used up today's free AI requests. Try again tomorrow or use another key.",
+      429,
+    )
+  }
   if (status === 429) {
     return new ApiError('RATE_LIMITED', 'The AI is getting too many requests. Wait a moment and try again.', 429)
   }
@@ -58,11 +75,7 @@ export function toApiError(status, body) {
 
 // The model's answer text from a generateContent response, skipping "thought" parts.
 export function responseText(data) {
-  const parts = data.candidates?.[0]?.content?.parts ?? []
-  const text = parts
-    .filter((part) => !part.thought)
-    .map((part) => part.text ?? '')
-    .join('')
+  const text = answerText(data)
   if (!text) {
     const blocked = Boolean(data.promptFeedback?.blockReason)
     throw new ApiError(
@@ -72,4 +85,40 @@ export function responseText(data) {
     )
   }
   return text
+}
+
+// Turns Gemini's server-sent events ("data: {json}" lines) into plain answer text chunks.
+export function sseToText() {
+  let buffer = ''
+  const textOf = (line) => {
+    if (!line.startsWith('data:')) return ''
+    try {
+      return answerText(JSON.parse(line.slice(5)))
+    } catch {
+      return ''
+    }
+  }
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += chunk
+      const lines = buffer.split('\n')
+      buffer = lines.pop() // the last line may be incomplete; keep it for the next chunk
+      for (const line of lines) {
+        const text = textOf(line.trim())
+        if (text) controller.enqueue(text)
+      }
+    },
+    flush(controller) {
+      const text = textOf(buffer.trim())
+      if (text) controller.enqueue(text)
+    },
+  })
+}
+
+function answerText(data) {
+  const parts = data.candidates?.[0]?.content?.parts ?? []
+  return parts
+    .filter((part) => !part.thought)
+    .map((part) => part.text ?? '')
+    .join('')
 }
