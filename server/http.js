@@ -18,6 +18,10 @@ export async function readJson(request) {
 }
 
 export function errorResponse(error) {
+  // The student pressed Stop before the answer started: nobody is waiting for a reply.
+  if (error?.name === 'AbortError') {
+    return new Response(null, { status: 499 })
+  }
   if (error instanceof ApiError) {
     return Response.json({ error: { code: error.code, message: error.message } }, { status: error.status })
   }

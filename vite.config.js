@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { Readable } from 'node:stream'
+import { pipeline, Readable } from 'node:stream'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -21,7 +21,7 @@ function localApi() {
         // no .env.local: the key must come from the settings field
       }
 
-      server.middlewares.use('/api', async (req, res) => {
+      server.middlewares.use('/api', async (req, res, next) => {
         const name = req.url.split('?')[0].slice(1)
         const file = `api/${name}.js`
         if (!/^[\w-]+$/.test(name) || !existsSync(file)) {
@@ -39,19 +39,25 @@ function localApi() {
         const disconnected = new AbortController()
         res.on('close', () => disconnected.abort())
 
-        const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
-        const response = await handler(
-          new Request(`http://localhost${req.originalUrl}`, {
-            method: req.method,
-            headers: req.headers,
-            body: hasBody ? Readable.toWeb(req) : undefined,
-            duplex: 'half',
-            signal: disconnected.signal,
-          }),
-        )
-        res.writeHead(response.status, Object.fromEntries(response.headers))
-        if (response.body) Readable.fromWeb(response.body).pipe(res)
-        else res.end()
+        try {
+          const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
+          const response = await handler(
+            new Request(`http://localhost${req.originalUrl}`, {
+              method: req.method,
+              headers: req.headers,
+              body: hasBody ? Readable.toWeb(req) : undefined,
+              duplex: 'half',
+              signal: disconnected.signal,
+            }),
+          )
+          if (res.destroyed) return response.body?.cancel() // the browser already left (Stop)
+          res.writeHead(response.status, Object.fromEntries(response.headers))
+          // pipeline cleans up both sides when the browser disconnects mid-stream.
+          if (response.body) pipeline(Readable.fromWeb(response.body), res, () => {})
+          else res.end()
+        } catch (error) {
+          next(error)
+        }
       })
     },
   }
