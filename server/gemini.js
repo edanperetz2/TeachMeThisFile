@@ -2,9 +2,10 @@
 // generateContent and its streaming twin.
 import { ApiError } from './http.js'
 
-// Tried in order. Free-tier quotas are per model (gemini-3.6-flash allows only 20
-// requests a day), so when a model is busy, out of quota or retired we use the next one.
-export const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.1-flash-lite']
+// Tried in order. Free-tier quotas are per model: the Flash-Lite models allow 500
+// requests a day (15 a minute), gemini-3.6-flash only 20 (5 a minute). When a model is
+// busy, out of quota or retired we use the next one, so a free key lasts many lessons.
+export const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.6-flash']
 const TRY_NEXT_MODEL_STATUS = new Set([404, 429, 503])
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
