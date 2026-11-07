@@ -8,11 +8,11 @@ Edventure AI Engineer home assignment. Stack: React + Vite + Tailwind (JavaScrip
 
 ## Run locally
 
-Requires Node.js 24 and the Vercel CLI (`npm i -g vercel`).
+Requires Node.js 24.
 
 ```bash
 npm install
-vercel dev      # runs the Vite front end and the /api functions together
+npm run dev     # front end + the /api functions on http://localhost:5173
 ```
 
-Front end only: `npm run dev`. Production build: `npm run build`. Unit tests: `npm test`.
+Production build: `npm run build`. Unit tests: `npm test`.
