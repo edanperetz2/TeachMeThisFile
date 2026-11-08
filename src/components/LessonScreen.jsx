@@ -54,7 +54,7 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
             <Fragment key={message.id}>
               {/* A divider where a new step begins, so progress shows in the chat too. */}
               {message.stepIndex !== messages[i - 1]?.stepIndex && (
-                <StepDivider label={t.stepDivider(message.stepIndex + 1, plan.steps[message.stepIndex].title)} />
+                <StepDivider label={t.stepNumber(message.stepIndex + 1)} title={plan.steps[message.stepIndex].title} />
               )}
               <ChatMessage
                 message={message}
@@ -101,12 +101,13 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
   )
 }
 
-function StepDivider({ label }) {
+function StepDivider({ label, title }) {
   return (
     <div className="flex items-center gap-3 pt-2 text-xs font-medium text-slate-500">
       <span className="h-px flex-1 bg-slate-200" />
-      <span className="max-w-[75%] truncate rounded-full bg-white px-3 py-1 ring-1 ring-slate-200" dir="auto">
-        {label}
+      {/* <bdi> keeps a title in another script (e.g. Hebrew in the English interface) in its own order. */}
+      <span className="max-w-[75%] truncate rounded-full bg-white px-3 py-1 ring-1 ring-slate-200">
+        {label} · <bdi>{title}</bdi>
       </span>
       <span className="h-px flex-1 bg-slate-200" />
     </div>

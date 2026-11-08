@@ -38,8 +38,8 @@ export default function LessonReport({ lesson, onNewLesson }) {
         {steps.map((s, i) => (
           <li key={i} className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-800" dir="auto">
-                {i + 1}. {s.title}
+              <p className="text-sm font-medium text-slate-800">
+                {i + 1}. <bdi>{s.title}</bdi>
               </p>
               <p className="mt-0.5 text-xs text-slate-500">
                 {t.answers(s.attempts)}
