@@ -164,8 +164,6 @@ The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded onl
 
 ## 4. What I would do with 4 more hours
 
-(After the first version I had about 4 more hours. I used them for: the lesson surviving a reload, the plan panel, the teacher report, one-tap replies for students, `npm run eval`, a design pass, an English/Hebrew interface, time awareness, and a guaranteed control line. With 4 more on top:)
-
 1. **Let the teacher review the plan** (and the OCR text of scanned pages) before the lesson starts, and edit or reorder steps.
 2. **Grow the eval:** more scenarios (scanned files, very long files, struggling students), several runs per scenario to measure how often each behaviour fails, and run it in CI before every prompt change.
 3. **Better PDF structure:** paragraph detection from line spacing, two-column layouts, ignoring repeated headers/footers.
