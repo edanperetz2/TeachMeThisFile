@@ -98,13 +98,13 @@ function situation({ plan, stepIndex, opening, lastAttempt, minutesUsed }) {
   const timeNote = timeSituation(plan, stepIndex, minutesUsed)
   if (timeNote) notes.push(timeNote)
   if (opening) {
+    notes.push(
+      stepIndex === 0
+        ? 'Start the lesson: greet the student in one short sentence, say in one line what you will explore together, then introduce the first idea of step 1 with a question. Set advance to false.'
+        : `Start step ${stepIndex + 1} now: link it to the previous step in one sentence, then introduce its first idea with a question. Don't greet again. Set advance to false.`,
+    )
     // Seen in testing: the opening named the very thing its question then asked for.
     notes.push("Your question must make the student think: don't name or explain its answer in the same message.")
-  }
-  if (opening && stepIndex === 0) {
-    notes.push('Start the lesson: greet the student in one short sentence, say in one line what you will explore together, then introduce the first idea of step 1 with a question. Set advance to false.')
-  } else if (opening) {
-    notes.push(`Start step ${stepIndex + 1} now: link it to the previous step in one sentence, then introduce its first idea with a question. Don't greet again. Set advance to false.`)
   }
   if (lastAttempt) {
     notes.push('The student has tried this step several times. If this answer is still not right, explain the answer clearly and kindly in 2-3 sentences, without asking another question, and set advance to true.')
@@ -118,6 +118,20 @@ function situation({ plan, stepIndex, opening, lastAttempt, minutesUsed }) {
   // Models sometimes forget the format in long chats; a reminder on every turn helps.
   notes.push(`End with the ${CONTROL_SENTINEL} line.`)
   return notes.join(' ')
+}
+
+// The teacher's time budget ("keep it under 15 minutes"): nothing to say until it's nearly used up.
+function timeSituation(plan, stepIndex, minutesUsed) {
+  const budget = plan.durationMinutes
+  if (!budget || minutesUsed === null) return ''
+  const stepsLeft = plan.steps.length - stepIndex
+  if (minutesUsed >= budget) {
+    return `The ${budget} minutes the teacher planned are used up: keep this short and move on as soon as the student shows understanding.`
+  }
+  if (minutesUsed >= budget * 0.75) {
+    return `About ${budget - minutesUsed} of the teacher's ${budget} minutes are left for ${stepsLeft} step(s): keep your messages short.`
+  }
+  return ''
 }
 
 const CONTROL_SCHEMA = {
@@ -161,20 +175,6 @@ export function ensureControlLine(requestControl) {
       if (control) controller.enqueue(`\n${CONTROL_SENTINEL}${JSON.stringify(control)}`)
     },
   })
-}
-
-// The teacher's time budget ("keep it under 15 minutes"): nothing to say until it's nearly used up.
-function timeSituation(plan, stepIndex, minutesUsed) {
-  const budget = plan.durationMinutes
-  if (!budget || minutesUsed === null) return ''
-  const stepsLeft = plan.steps.length - stepIndex
-  if (minutesUsed >= budget) {
-    return `The ${budget} minutes the teacher planned are used up: keep this short and move on as soon as the student shows understanding.`
-  }
-  if (minutesUsed >= budget * 0.75) {
-    return `About ${budget - minutesUsed} of the teacher's ${budget} minutes are left for ${stepsLeft} step(s): keep your messages short.`
-  }
-  return ''
 }
 
 // Chat history → Gemini contents. Gemini wants turns to alternate and to start and end

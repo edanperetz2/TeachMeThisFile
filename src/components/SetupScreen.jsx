@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { fileProblem, MAX_FILE_MB } from '../files/fileTypes.js'
-import { useLanguage, useT } from '../i18n/language.js'
+import { useT } from '../i18n/language.js'
 import { errorText } from '../i18n/strings.js'
 import ApiKeyField from './ApiKeyField.jsx'
 import FilePicker from './FilePicker.jsx'
-import { ArrowRightIcon, ChatIcon, CheckIcon, LogoMark, PenIcon, UploadIcon } from './icons.jsx'
+import { ArrowRightIcon, ChatIcon, LogoMark, PenIcon, UploadIcon } from './icons.jsx'
+import LanguageQuestion from './LanguageQuestion.jsx'
 import LanguageSwitch from './LanguageSwitch.jsx'
-import Spinner from './Spinner.jsx'
+import Preparing from './Preparing.jsx'
 
 const HOW_IT_WORKS_ICONS = [UploadIcon, PenIcon, ChatIcon]
 
@@ -143,44 +144,6 @@ export default function SetupScreen({
   )
 }
 
-// Asked only when the teacher named no language and their instructions and the file differ.
-function LanguageQuestion({ options: [instructionsLanguage, fileLanguage], onChoose }) {
-  const t = useT()
-  const { language } = useLanguage()
-  const name = (code) => {
-    try {
-      return new Intl.DisplayNames([language], { type: 'language' }).of(code)
-    } catch {
-      return code
-    }
-  }
-  const choices = [
-    { code: instructionsLanguage, hint: t.likeInstructions },
-    { code: fileLanguage, hint: t.likeFile },
-  ]
-  return (
-    <section role="group" aria-labelledby="language-question" className="rise-in rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
-      <h2 id="language-question" className="font-semibold text-slate-900">
-        {t.languageQuestion}
-      </h2>
-      <p className="mt-1 text-sm text-slate-600">{t.languageQuestionNote}</p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        {choices.map(({ code, hint }) => (
-          <button
-            key={code}
-            type="button"
-            onClick={() => onChoose(code)}
-            className="rounded-xl border border-slate-300 px-4 py-3 text-start transition-colors hover:border-indigo-500 hover:bg-indigo-50"
-          >
-            <span className="block font-semibold text-slate-900">{name(code)}</span>
-            <span className="block text-xs text-slate-500">{hint}</span>
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
-
 function Card({ number, title, labelFor, children }) {
   const Title = labelFor ? 'label' : 'h2'
   return (
@@ -191,38 +154,5 @@ function Card({ number, title, labelFor, children }) {
       </Title>
       {children}
     </section>
-  )
-}
-
-// A short checklist while the lesson is being prepared, so waiting feels like progress.
-function Preparing({ status, scanProgress }) {
-  const t = useT()
-  const steps = [
-    {
-      label: scanProgress ? t.readingScans(scanProgress.done, scanProgress.total) : t.readingFile,
-      state: status === 'extracting' ? 'active' : 'done',
-    },
-    { label: t.planning, state: status === 'planning' ? 'active' : 'pending' },
-    { label: t.meetingTutor, state: 'pending' },
-  ]
-  return (
-    <ol role="status" className="space-y-3 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
-      {steps.map((step) => (
-        <li key={step.label} className="flex items-center gap-3 text-sm">
-          {step.state === 'done' && (
-            <span className="grid size-6 place-items-center rounded-full bg-emerald-500 text-white">
-              <CheckIcon className="size-4" />
-            </span>
-          )}
-          {step.state === 'active' && (
-            <span className="grid size-6 place-items-center text-indigo-600">
-              <Spinner className="size-5" />
-            </span>
-          )}
-          {step.state === 'pending' && <span className="mx-1.5 size-3 rounded-full border-2 border-slate-300" />}
-          <span className={step.state === 'pending' ? 'text-slate-400' : 'font-medium text-slate-800'}>{step.label}</span>
-        </li>
-      ))}
-    </ol>
   )
 }
