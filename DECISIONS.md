@@ -95,6 +95,8 @@ The Vite build is static; each file in `api/` is a Node.js function. Designed ar
 | `remark-math`, `rehype-katex`, `katex` | Formulas in LaTeX. An npm `overrides` entry pins all KaTeX copies to the current version (`npm audit` is clean) |
 | `vitest` | Unit tests for the pure parts (`npm run eval` uses no extra library) |
 
+Not a library, but an outside resource: the **Rubik** font from Google Fonts, chosen because it is friendly and covers both Latin and Hebrew letters (Hebrew lessons look consistent). Icons are a handful of inline SVGs (`src/components/icons.jsx`), so no icon package.
+
 The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded only when needed, so the first page loads ~80 KB of gzipped JS and CSS.
 
 ## 2. What I decided not to do
