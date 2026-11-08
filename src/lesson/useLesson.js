@@ -33,16 +33,16 @@ export function useLesson(apiKey) {
     }
   }
 
-  // The teacher's answer to "which language?" (an ISO code). The plan already made in that
-  // language is used as is; for the other one the lesson is planned again in it.
-  async function chooseLanguage(code) {
+  // The teacher's answer to "which language?": one of the two offered ({ code }, an ISO code)
+  // or another one they typed ({ name }). The plan already made in the chosen language is used
+  // as is; otherwise the lesson is planned again in it.
+  async function chooseLanguage({ code, name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) }) {
     const plan = lesson.pendingPlan
-    const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code)
     const teacherPrompt = `${lesson.teacherPrompt}\n\nTeach the lesson in ${name}.`
     dispatch({ type: 'LANGUAGE_CHOSEN', teacherPrompt })
     try {
       const chosenPlan =
-        code === plan.languages.lesson
+        code && code === plan.languages.lesson
           ? plan
           : await requestPlan({ teacherPrompt, passages: lesson.document.passages, apiKey })
       dispatch({ type: 'PLAN_READY', plan: chosenPlan, at: Date.now() })
