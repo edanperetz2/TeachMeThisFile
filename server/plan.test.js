@@ -7,8 +7,14 @@ const step = (passageIds) => ({ title: 't', objective: 'o', question: 'q', passa
 
 describe('parsePlan', () => {
   it('keeps a valid plan as is', () => {
-    const raw = { title: 'Cells', language: 'French', durationMinutes: 15, steps: [step(['p1']), step(['p2', 'p3'])] }
+    const languages = { lesson: 'fr', prompt: 'en', document: 'he', requested: true }
+    const raw = { title: 'Cells', language: 'French', languages, durationMinutes: 15, steps: [step(['p1']), step(['p2', 'p3'])] }
     expect(parsePlan(JSON.stringify(raw), passages)).toEqual(raw)
+  })
+
+  it('normalises language codes and treats anything odd as unknown', () => {
+    const languages = parsePlan(JSON.stringify({ languages: { lesson: 'HE', prompt: 'en-US', document: 'Hebrew!' }, steps: [step(['p1'])] }), passages).languages
+    expect(languages).toEqual({ lesson: 'he', prompt: 'en', document: '', requested: false })
   })
 
   it('keeps only a positive whole number of minutes', () => {

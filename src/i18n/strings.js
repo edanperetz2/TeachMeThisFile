@@ -34,6 +34,10 @@ const en = {
   readingScans: (done, total) => `Reading scanned pages (${done} of ${total} done)`,
   planning: 'Planning the lesson',
   meetingTutor: 'Meeting your tutor',
+  languageQuestion: 'Which language should the lesson be in?',
+  languageQuestionNote: "Your instructions and the file are in different languages, and the instructions don't say.",
+  likeInstructions: 'like your instructions',
+  likeFile: 'like the file',
 
   chooseFile: 'Choose a file',
   orDrop: 'or drop it here',
@@ -121,6 +125,10 @@ const he = {
   readingScans: (done, total) => `קוראים עמודים סרוקים (${done} מתוך ${total})`,
   planning: 'מתכננים את השיעור',
   meetingTutor: 'פוגשים את המורה',
+  languageQuestion: 'באיזו שפה ללמד את השיעור?',
+  languageQuestionNote: 'ההנחיות שלכם והקובץ כתובים בשפות שונות, וההנחיות לא מציינות שפה.',
+  likeInstructions: 'כמו ההנחיות שלכם',
+  likeFile: 'כמו הקובץ',
 
   chooseFile: 'בחרו קובץ',
   orDrop: 'או גררו אותו לכאן',

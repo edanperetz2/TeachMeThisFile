@@ -7,13 +7,14 @@
 export const MAX_ATTEMPTS = 3
 
 export const initialLessonState = {
-  // What is in flight right now: idle | extracting | planning | streaming | done | error
+  // What is in flight right now: idle | extracting | planning | choosingLanguage | streaming | done | error
   status: 'idle',
   error: null, // { code, message } while status is 'error'
   scanProgress: null, // { done, total } while scanned pages are being read
   teacherPrompt: '',
   document: null, // { fileName, passages: [{ id, text, page }] }
-  plan: null, // { language, steps: [{ title, objective, passageIds, question }] }
+  plan: null, // { title, language, languages, durationMinutes, steps: [{ title, objective, passageIds, question }] }
+  pendingPlan: null, // a plan waiting for the teacher to choose the lesson language
   currentStepIndex: 0,
   progress: [], // one per plan step: { status: pending | active | done, attempts, understood, startedAt, finishedAt }
   messages: [], // { id, role: tutor | student, text, stepIndex, passageIds, stopped }
@@ -39,10 +40,18 @@ export function lessonReducer(state, action) {
     case 'DOCUMENT_READY':
       return { ...state, status: 'planning', document: action.document }
 
+    case 'LANGUAGE_QUESTION':
+      return { ...state, status: 'choosingLanguage', pendingPlan: action.plan }
+
+    case 'LANGUAGE_CHOSEN':
+      // The choice is written into the teacher's instructions, so the tutor follows it too.
+      return { ...state, status: 'planning', pendingPlan: null, teacherPrompt: action.teacherPrompt }
+
     case 'PLAN_READY':
       return {
         ...state,
         status: 'idle',
+        pendingPlan: null,
         plan: action.plan,
         currentStepIndex: 0,
         progress: action.plan.steps.map((_, i) => ({

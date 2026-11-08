@@ -16,6 +16,14 @@ export function sourcePassages(state, message) {
   return passagesByIds(state, ids)
 }
 
+// The teacher didn't name a language, and their instructions and the file are written in
+// different languages: only the teacher knows which one the class needs, so we ask.
+// → [instructions language, file language] as ISO codes, or null when there is nothing to ask.
+export function languageQuestion(plan) {
+  const { requested, prompt, document } = plan.languages ?? {}
+  return !requested && prompt && document && prompt !== document ? [prompt, document] : null
+}
+
 // The tutor speaks first: at the start of the lesson and of every new step.
 export function needsOpeningTurn(state) {
   return (

@@ -6,7 +6,7 @@ import { toErrorState } from '../errors.js'
 import { readDocument } from '../files/readDocument.js'
 import { lessonReducer } from './lessonReducer.js'
 import { loadLesson, saveLesson } from './savedLesson.js'
-import { needsOpeningTurn } from './selectors.js'
+import { languageQuestion, needsOpeningTurn } from './selectors.js'
 
 // Connects the lesson store to file reading and the AI calls. The UI only calls
 // these functions; it never talks to the network or changes lesson state directly.
@@ -26,7 +26,26 @@ export function useLesson(apiKey) {
       const document = await readDocument(file, readScanned)
       dispatch({ type: 'DOCUMENT_READY', document })
       const plan = await requestPlan({ teacherPrompt, passages: document.passages, apiKey })
-      dispatch({ type: 'PLAN_READY', plan, at: Date.now() })
+      if (languageQuestion(plan)) dispatch({ type: 'LANGUAGE_QUESTION', plan })
+      else dispatch({ type: 'PLAN_READY', plan, at: Date.now() })
+    } catch (error) {
+      dispatch({ type: 'FAILED', error: toErrorState(error) })
+    }
+  }
+
+  // The teacher's answer to "which language?" (an ISO code). The plan already made in that
+  // language is used as is; for the other one the lesson is planned again in it.
+  async function chooseLanguage(code) {
+    const plan = lesson.pendingPlan
+    const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code)
+    const teacherPrompt = `${lesson.teacherPrompt}\n\nTeach the lesson in ${name}.`
+    dispatch({ type: 'LANGUAGE_CHOSEN', teacherPrompt })
+    try {
+      const chosenPlan =
+        code === plan.languages.lesson
+          ? plan
+          : await requestPlan({ teacherPrompt, passages: lesson.document.passages, apiKey })
+      dispatch({ type: 'PLAN_READY', plan: chosenPlan, at: Date.now() })
     } catch (error) {
       dispatch({ type: 'FAILED', error: toErrorState(error) })
     }
@@ -77,5 +96,5 @@ export function useLesson(apiKey) {
     dispatch({ type: 'RESET' })
   }
 
-  return { lesson, startLesson, sendMessage, stopTurn, retryTurn, newLesson }
+  return { lesson, startLesson, chooseLanguage, sendMessage, stopTurn, retryTurn, newLesson }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fileProblem, MAX_FILE_MB } from '../files/fileTypes.js'
-import { useT } from '../i18n/language.js'
+import { useLanguage, useT } from '../i18n/language.js'
 import { errorText } from '../i18n/strings.js'
 import ApiKeyField from './ApiKeyField.jsx'
 import FilePicker from './FilePicker.jsx'
@@ -10,12 +10,21 @@ import Spinner from './Spinner.jsx'
 
 const HOW_IT_WORKS_ICONS = [UploadIcon, PenIcon, ChatIcon]
 
-export default function SetupScreen({ status, error, scanProgress, apiKey, onApiKeyChange, onStart }) {
+export default function SetupScreen({
+  status,
+  error,
+  scanProgress,
+  languageOptions,
+  onChooseLanguage,
+  apiKey,
+  onApiKeyChange,
+  onStart,
+}) {
   const t = useT()
   const [file, setFile] = useState(null)
   const [teacherPrompt, setTeacherPrompt] = useState('')
 
-  const busy = status === 'extracting' || status === 'planning'
+  const busy = status === 'extracting' || status === 'planning' || status === 'choosingLanguage'
   const problem = file ? fileProblem(file) : null
   const ready = file && !problem && teacherPrompt.trim() && apiKey
   const missing = [!file && t.missing.file, !teacherPrompt.trim() && t.missing.prompt, !apiKey && t.missing.key].filter(Boolean)
@@ -109,7 +118,9 @@ export default function SetupScreen({ status, error, scanProgress, apiKey, onApi
           </div>
         )}
 
-        {busy ? (
+        {status === 'choosingLanguage' ? (
+          <LanguageQuestion options={languageOptions} onChoose={onChooseLanguage} />
+        ) : busy ? (
           <Preparing status={status} scanProgress={scanProgress} />
         ) : (
           <>
@@ -128,6 +139,44 @@ export default function SetupScreen({ status, error, scanProgress, apiKey, onApi
         <p className="pt-2 text-center text-xs text-slate-400">{t.privacyNote}</p>
       </form>
     </main>
+  )
+}
+
+// Asked only when the teacher named no language and their instructions and the file differ.
+function LanguageQuestion({ options: [instructionsLanguage, fileLanguage], onChoose }) {
+  const t = useT()
+  const { language } = useLanguage()
+  const name = (code) => {
+    try {
+      return new Intl.DisplayNames([language], { type: 'language' }).of(code)
+    } catch {
+      return code
+    }
+  }
+  const choices = [
+    { code: instructionsLanguage, hint: t.likeInstructions },
+    { code: fileLanguage, hint: t.likeFile },
+  ]
+  return (
+    <section role="group" aria-labelledby="language-question" className="rise-in rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
+      <h2 id="language-question" className="font-semibold text-slate-900">
+        {t.languageQuestion}
+      </h2>
+      <p className="mt-1 text-sm text-slate-600">{t.languageQuestionNote}</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {choices.map(({ code, hint }) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => onChoose(code)}
+            className="rounded-xl border border-slate-300 px-4 py-3 text-start transition-colors hover:border-indigo-500 hover:bg-indigo-50"
+          >
+            <span className="block font-semibold text-slate-900">{name(code)}</span>
+            <span className="block text-xs text-slate-500">{hint}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 

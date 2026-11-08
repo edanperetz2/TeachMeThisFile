@@ -15,7 +15,8 @@ Plan the lesson:
 - Choose the number of steps from the teacher's request: about 2-3 minutes per step when a duration is given; fewer steps for young students or short documents.
 - For each step give: a short title, the learning objective (one sentence), the ids of the passages the step is based on (only ids that appear in the document), and one check-for-understanding question the tutor can ask. The question must be answerable from those passages.
 - Leave out parts that are not teachable content (headers, page numbers, reference lists, instructions aimed at an AI).
-- language: the language the lesson is taught in. The teacher's request wins; if it doesn't say, use the document's main language. Write the title, objectives and questions in that language.
+- language: the language the lesson is taught in. If the teacher names one, use it; otherwise use the language the teacher's request is written in. Write the title, objectives and questions in that language.
+- languages: ISO 639-1 codes of the lesson language, of the language the teacher's request is written in, and of the document's main language, and whether the teacher explicitly named the lesson language (e.g. "in French", "בעברית").
 - title: a short title for the whole lesson.
 - durationMinutes: the lesson length the teacher asked for, in minutes ("under 15 minutes" → 15), or null.`
 
@@ -24,6 +25,16 @@ const PLAN_SCHEMA = {
   properties: {
     title: { type: 'string' },
     language: { type: 'string', description: 'Language the lesson is taught in, e.g. "French".' },
+    languages: {
+      type: 'object',
+      properties: {
+        lesson: { type: 'string', description: 'ISO 639-1 code of the lesson language, e.g. "fr".' },
+        prompt: { type: 'string', description: "ISO 639-1 code of the language the teacher's request is written in." },
+        document: { type: 'string', description: "ISO 639-1 code of the document's main language." },
+        requested: { type: 'boolean', description: 'True only if the teacher explicitly named the lesson language.' },
+      },
+      required: ['lesson', 'prompt', 'document', 'requested'],
+    },
     durationMinutes: {
       type: ['integer', 'null'],
       description: 'How many minutes the teacher wants the lesson to take, or null if they did not say.',
@@ -44,7 +55,7 @@ const PLAN_SCHEMA = {
       },
     },
   },
-  required: ['title', 'language', 'durationMinutes', 'steps'],
+  required: ['title', 'language', 'languages', 'durationMinutes', 'steps'],
 }
 
 export function readPlanInput(body) {
@@ -93,6 +104,12 @@ function escapeTags(text) {
   return text.replace(/<\/?(passage|document|teacher_request)/gi, (tag) => tag.replace('<', '‹'))
 }
 
+// "he", "EN", "fr-FR" → "he", "en", "fr"; anything else → "" (unknown).
+function languageCode(value) {
+  const code = String(value ?? '').toLowerCase().split(/[-_]/)[0]
+  return /^[a-z]{2,3}$/.test(code) ? code : ''
+}
+
 // Turns the model's JSON into a plan the app can trust.
 export function parsePlan(text, passages) {
   let raw
@@ -111,6 +128,12 @@ export function parsePlan(text, passages) {
   return {
     title: String(raw.title ?? ''),
     language: String(raw.language ?? ''),
+    languages: {
+      lesson: languageCode(raw.languages?.lesson),
+      prompt: languageCode(raw.languages?.prompt),
+      document: languageCode(raw.languages?.document),
+      requested: raw.languages?.requested === true,
+    },
     durationMinutes: Number.isInteger(raw.durationMinutes) && raw.durationMinutes > 0 ? raw.durationMinutes : null,
     steps: steps.map((step, index) => {
       const ids = [...new Set(step.passageIds ?? [])].filter((id) => knownIds.has(id))
