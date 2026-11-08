@@ -1,0 +1,18 @@
+# Runs the unit tests and the production build on every push and pull request.
+# (Vercel deploys main on its own; this makes sure what it deploys is tested.)
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
