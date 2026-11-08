@@ -1,6 +1,7 @@
 import { AppError } from '../errors.js'
 import { imageFileToJpeg } from './images.js'
 import { splitIntoPassages } from './passages.js'
+import { decodeText } from './textFile.js'
 
 // Below this much real text we say the file has nothing to teach.
 const MIN_TEXT_CHARS = 20
@@ -46,7 +47,7 @@ async function readPages(file) {
   if (IMAGE_EXTENSIONS.includes(extension)) {
     return [{ page: null, image: await readImage(file) }]
   }
-  return [{ page: null, text: await file.text() }]
+  return [{ page: null, text: decodeText(await file.arrayBuffer()) }]
 }
 
 async function readImage(file) {

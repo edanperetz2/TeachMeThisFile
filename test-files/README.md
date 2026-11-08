@@ -14,3 +14,4 @@ Small files used to check the app by hand against the kinds of material reviewer
 | `scanned-math-and-hebrew.pdf` | Two image-only pages (no text layer): a formula worksheet with a table, and a Hebrew page → read by Gemini (OCR) |
 | `worksheet-photo.png` | A slightly rotated photo of the worksheet → image upload and OCR |
 | `arabic-photosynthesis.pdf` | Arabic text with English terms and formulas inside sentences, e.g. (CO2), (chloroplasts) |
+| `hebrew-windows-1255.txt` | A Hebrew text file in the old Windows encoding (not UTF-8) → read correctly, not as gibberish |
