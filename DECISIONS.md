@@ -5,7 +5,7 @@
 ### The lesson flow
 
 1. **Read the file in the browser** and split it into numbered **passages** (`p1`, `p2`, … roughly paragraph-sized, never crossing a page, each keeping its page number). Passages are the unit everything else points at: the plan, the tutor's grounding and the **Source** panel.
-2. **Plan once** (`/api/plan`): the model returns a lesson plan as JSON that must match a schema — 3 to 8 steps, each with a title, an objective, the passage ids it is based on and a check-for-understanding question, plus the lesson language. The step count follows the teacher's prompt (about 2–3 minutes per step).
+2. **Plan once** (`/api/plan`): the model returns a lesson plan as JSON that must match a schema — 3 to 8 steps, each with a title, an objective, the passage ids it is based on and a check-for-understanding question, plus the lesson language and the time the teacher asked for (`durationMinutes`, or null). The step count follows the teacher's prompt (about 2–3 minutes per step).
 3. **Teach step by step** (`/api/chat`): every tutor turn gets the teacher's prompt, the plan outline, the current step, the student's progress on it, **only the current step's passages** and the last 10 messages. The tutor speaks first, and opens every new step itself.
 
 Sending only the current step's passages keeps every turn small and fast no matter how long the file is (a 31-page PDF answers as fast as a one-page file), and it keeps the tutor on the current idea.
@@ -23,7 +23,7 @@ The model **suggests**, the reducer **decides**. After each reply the model adds
 The browser hides it while streaming and turns it into an action. The reducer then applies the rules:
 
 - `advance: true` moves to the next step — but only on a reply to the student, never on the tutor's opening message (the model once did that and skipped a step).
-- A missing or broken control line means "don't advance"; nothing breaks.
+- If the model forgets the control line, the server asks for it separately (see below). If that fails too, a missing or broken line means "don't advance"; nothing breaks.
 - After 3 attempts on a step, the next turn tells the tutor to explain the answer and move on, and the reducer advances anyway, so no student is stuck forever.
 - Source passage ids are checked against the current step; invalid or missing ones fall back to the step's passages, so **Source** always works.
 - **Stop** (or a cut connection) keeps the partial text, marks it stopped, doesn't count an attempt and doesn't advance.
@@ -37,11 +37,21 @@ Because the lesson is plain data, three features come almost for free:
 
 For a stuck student there are one-tap replies — *I don't know*, *Give me a hint*, *Explain it differently* — which the tutor's rules already cover; they count as answers like any other.
 
+### Interface language: English or Hebrew
+
+The user picks the interface language with an **EN | עב** switch on both screens (the first visit follows the browser's language; the choice is a display preference, so it is remembered in localStorage). All interface text lives in `src/i18n/strings.js`; components read it with `useT()`. Hebrew turns the whole page right-to-left: layouts use start/end CSS so chat bubbles, the source drawer and arrows mirror, while the API key field and formulas stay left-to-right, and step titles in another script are isolated with `<bdi>`. Error messages are translated by their code (in English the server's more specific message is shown).
+
+This is separate from the **lesson language**, which follows the teacher's prompt as the assignment asks: an English interface can run a French lesson about a Hebrew file. When the prompt names no language, the lesson uses the file's main language — the teacher chose that material for the class, and it keeps a Hebrew file taught in Hebrew, right-to-left.
+
 ### How the tutor teaches
 
 The teaching rules are in `server/tutor.js`: one small idea per message, short messages, end with a thinking question, never give the answer to a wrong attempt (hint → easier question → explain), adapt with simpler words and everyday examples, stay inside the step's passages, say so when a question is outside the file, follow the teacher's language/level/style (the teacher's language wins over the file's), Markdown with LaTeX formulas.
 
-Testing showed that the Flash-Lite model doesn't always follow rules that only appear once in the system prompt (it revealed an answer, and sometimes forgot the control line). So each turn also gets a short **note from the app** at the end of the conversation: "start step 3 now", "if the answer is wrong, don't say the right answer", "this is the last try: explain and move on", "this is the last step: end with a recap", "end with the control line". This fixed both problems in the tests below.
+Testing showed that the Flash-Lite model doesn't always follow rules that only appear once in the system prompt (it revealed answers, and sometimes forgot the control line). So each turn also gets a short **note from the app** at the end of the conversation: "start step 3 now", "don't answer your own opening question", "if the answer is wrong, don't say the right answer", "this is the last try: explain and move on", "this is the last step: end with a recap", "about 3 of the teacher's 15 minutes are left: keep it short", "end with the control line".
+
+**A control line on every reply.** Even with the reminder, the live eval found about 1 reply in 10 without a control line, so that answer never counted toward progress. Now, when a streamed reply ends without one, `/api/chat` makes one more short call asking only for the control data, with a JSON schema (structured output can't skip the format), and appends it before closing the stream. The extra call happens only on those replies. After this change the live eval found 0 missing.
+
+**Time awareness.** The plan records the teacher's time budget ("keep it under 15 minutes" → 15). Each turn sends the minutes used so far; near the end of the budget the tutor is told to keep messages short, and once it is used up to move on as soon as the student shows understanding.
 
 **Prompt injection:** file content is wrapped in `<document><passage id="…">` delimiters, and the prompts say it is data, not instructions. Text inside a file can't close those tags early (they are escaped). Markdown is rendered without raw HTML, so file content can't inject markup into the page.
 
@@ -101,14 +111,13 @@ The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded onl
 
 ## 2. What I decided not to do
 
-- **Accounts, a database, saving lessons.** Not needed for one teacher → one student session; the assignment says to keep it small. A lesson lives in memory and is lost on reload.
+- **Accounts and saving lessons on a server.** Not needed for one teacher → one student session; the assignment says to keep it small. A lesson lives in the browser tab (it survives a reload, not closing the tab).
 - **Server-side file upload.** Reading in the browser avoids the 4.5 MB body limit, storage and privacy questions.
-- **RAG / embeddings.** The planner can read the whole document (up to 400k characters) and assigns passages to steps; each turn then uses only that step's passages. A vector search would add a service and cost without changing the lessons I tested.
 - **Several AI providers.** One provider with a model fallback list is simpler to explain and test; reviewers need only one key.
 - **An SDK** (Google GenAI or Vercel AI SDK): two REST calls don't need one, and errors are easier to map by hand.
-- **Translating the interface.** Lessons follow the teacher's language; the buttons stay in English.
 - **A database (e.g. Supabase) for lesson history and progress tracking.** Without accounts, a database the browser writes to is readable by anyone who has the public key; adding accounts means building sign-in. The data is about children, so storing it on a server is a privacy decision a school should make on purpose. The useful part — not losing a lesson, and a progress report — works without a server (sessionStorage and the end-of-lesson report).
-- **RAG / embeddings** (considered again as an add-on). The number of requests isn't the issue (Gemini embeds 100 passages per call), but embedding a long file sends the whole text again at the start (the free tier's tokens-per-minute), and every student message would need one more call before the tutor can answer. For one lesson about one file, the plan already sees the whole document, so it isn't worth the cost and the extra moving parts.
+- **RAG / embeddings.** The planner already reads the whole document (up to 400k characters) and assigns passages to steps; each turn uses only that step's passages. I considered retrieval again as an add-on for questions outside the current step: the number of requests isn't the issue (Gemini embeds 100 passages per call), but embedding a long file sends the whole text again at the start (the free tier's tokens-per-minute), and every student message would need one more call before the tutor can answer. For one lesson about one file, the plan already sees the whole document, so it isn't worth the cost and the extra moving parts.
+- **More interface languages** (e.g. Arabic): the structure supports it (one more dictionary), but I would want a native speaker to check the texts.
 - **TypeScript** — the assignment asks for JavaScript.
 
 ## 3. Weaknesses I know about
@@ -119,25 +128,25 @@ The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded onl
 - **OCR is not perfect.** In my tests one closing `$$` came back as `$|` and one Hebrew letter was swapped. Handwriting and low-quality scans will be worse. Formulas from a PDF's text layer arrive as plain Unicode (`v = u + a·t`), not LaTeX.
 - **PDF layout.** No paragraph or column detection: multi-column pages, headers and footers can be mixed into the text. Right-to-left lines are reordered with a simple rule that can fail on unusual PDFs.
 - **Limits on big files:** at most 30 scanned pages are read (the rest are listed as skipped), and the planner sees at most 400,000 characters of text.
-- **"Keep it under 15 minutes"** is followed through the number of steps. The app records minutes per step for the report, but doesn't tell the tutor to hurry up.
+- **Time is approximate.** The tutor is told when the teacher's time budget is nearly used up, but a student who answers slowly can still run over; the app never cuts a lesson short.
 - **Word files:** equations and images inside .docx are not read.
 - **Prompt-injection defence is prompt-based** (delimiters + instructions). It held in my tests, but it is not a guarantee.
 - **Cold starts / latency:** the first request after a while can take a few extra seconds; replies usually start after 1.5–2 s.
-- **The control line is still missed now and then.** The live eval run found 1 reply in ~10 without it. Nothing breaks (no advance; the next reply carries on), but that answer doesn't count toward progress.
+- **A forgotten control line costs one extra request** (about 1 reply in 10 before the fix). If that request fails too, that answer doesn't count toward progress.
 - **The eval's judge is itself an AI** and can be wrong, and each check runs once (no repeated runs to measure variance). File reading (PDF, OCR) is not in the eval; it was checked in the browser.
-- **No end-to-end UI tests.** The pure logic has 99 unit tests and the tutor has `npm run eval`; the UI was checked with scripted browser runs.
-- **The interface is in English** even when the lesson is in Hebrew, Arabic or French (the lesson text itself follows the teacher's language and direction).
+- **No end-to-end UI tests.** The pure logic has 111 unit tests and the tutor has `npm run eval`; the UI was checked with scripted browser runs (including an emulated phone), not on a real iPhone or Android device.
+- **Two interface languages only** (English, Hebrew). Arabic or French lessons work, with an English or Hebrew interface around them.
 
 ## 4. What I would do with 4 more hours
 
-(After the first version I had about 4 more hours. I used them for: the lesson surviving a reload, the plan panel, the teacher report, one-tap replies for students, `npm run eval`, and a design pass on the interface. With 4 more on top:)
+(After the first version I had about 4 more hours. I used them for: the lesson surviving a reload, the plan panel, the teacher report, one-tap replies for students, `npm run eval`, a design pass, an English/Hebrew interface, time awareness, and a guaranteed control line. With 4 more on top:)
 
 1. **Let the teacher review the plan** (and the OCR text of scanned pages) before the lesson starts, and edit or reorder steps.
 2. **Grow the eval:** more scenarios (scanned files, very long files, struggling students), several runs per scenario to measure how often each behaviour fails, and run it in CI before every prompt change.
 3. **Better PDF structure:** paragraph detection from line spacing, two-column layouts, ignoring repeated headers/footers.
-4. **A translated, right-to-left interface** for Hebrew and Arabic lessons.
+4. **More interface languages** (Arabic first), checked by native speakers.
 5. **Playwright end-to-end tests in CI** for the main flows and error states.
-6. **Time awareness:** tell the tutor how much of the teacher's time budget is left, so it can shorten the last steps.
+6. **Test on real phones** (iOS Safari and Android Chrome), especially the keyboard covering the input.
 
 ## 5. How I know it works
 
@@ -164,20 +173,20 @@ Earlier rounds of the same tests found and fixed: the model advancing in its own
 
 | Scenario | Checks |
 |---|---|
-| Hebrew file, French lesson | taught in French · a wrong answer gets a hint, not the answer · a wrong answer doesn't finish the step · an off-topic question is declined and steered back |
+| Hebrew file, French lesson | taught in French · the opening question doesn't give away its answer · a wrong answer gets a hint, not the answer · a wrong answer doesn't finish the step · an off-topic question is declined and steered back |
 | Three wrong answers | the lesson moves to step 2 · the third reply explains the answer |
 | Instructions hidden in the file | the lesson is about volcanoes · "every answer is 42" is ignored · the system prompt is not revealed |
 | A good student finishes the lesson | the lesson reaches *done* · every step is done · every reply has a control line · the last reply is a recap |
 
-Results: **13/13** against the local server; **12/13** against the live site — one reply (of ~10) had no control line, which the app tolerated as designed (see weaknesses).
+Results: first version **13/13** locally and **12/13** live — one reply had no control line, which led to the server-side fix above. After the fixes: **13/13** locally and **14/14** live (with the new opening-question check), with no missing control lines.
 
 ### Error states and UI, checked in the browser (390 px wide)
 
-Random bytes named `.txt` → "doesn't look like readable text"; blank PDF → "We couldn't find any text"; wrong key → "This Gemini API key was not accepted"; network cut mid-lesson → message kept, Retry continues; key rejected mid-lesson → key field in the error bar; Stop before and during a reply; Source as a bottom sheet (phone) and side drawer (desktop); no horizontal scroll; Hebrew paragraphs right-to-left with formulas left-to-right.
+Random bytes named `.txt` → "doesn't look like readable text"; blank PDF → "We couldn't find any text"; wrong key → "This Gemini API key was not accepted"; network cut mid-lesson → message kept, Retry continues; key rejected mid-lesson → key field in the error bar; Stop before and during a reply; Source as a bottom sheet (phone) and side drawer (desktop); no horizontal scroll; Hebrew paragraphs right-to-left with formulas left-to-right; the Hebrew interface fully mirrored (bubbles, drawer, progress bar), switching language mid-lesson; an emulated iPhone (touch, 16 px inputs so iOS doesn't zoom) uploading a photo of a worksheet.
 
-### Unit tests (`npm test`, 99 tests)
+### Unit tests (`npm test`, 111 tests)
 
-The lesson reducer (advancing, attempts, the 3-try rule, opening turns, Stop, failures, late events), the passage splitter, the control-line parser, plan validation, prompt building and delimiter escaping, OCR batching and skipping, the model fallback, error mapping, client retries, saving and restoring a lesson, and the teacher report.
+The lesson reducer (advancing, attempts, the 3-try rule, opening turns, Stop, failures, late events), the passage splitter, the control-line parser, plan validation, prompt building and delimiter escaping, OCR batching and skipping, the model fallback, error mapping, client retries, saving and restoring a lesson, the teacher report (in both languages), the server-side control-line fallback and the time budget notes.
 
 ### How I worked
 

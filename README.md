@@ -8,9 +8,10 @@ Edventure AI Engineer home assignment. Stack: React + Vite + Tailwind (JavaScrip
 
 ## How to use it
 
+0. Choose the interface language with the **EN | עב** switch (Hebrew turns the app right-to-left). The lesson itself is taught in the language the teacher asks for.
 1. **Get a free Gemini API key** at [Google AI Studio](https://aistudio.google.com/apikey) → *Create API key*.
 2. Open the app and **pick a file**: PDF (text or scanned), Word (.docx), text/Markdown, or a photo (JPG/PNG/WebP), up to 30 MB.
-3. **Say how it should be taught**, for example: *"Teach this to 7th graders, in French. Be Socratic. Keep it under 15 minutes."*
+3. **Say how it should be taught**, for example: *"Teach this to 7th graders, in French. Be Socratic. Keep it under 15 minutes."* — or tap one of the examples. The tutor follows the language, level, style and time you ask for.
 4. **Paste your key** and press **Start lesson**. The app reads the file (scanned pages are read by the AI, with progress shown) and plans the lesson.
 5. **The lesson** opens with the tutor's first question. Answer in the chat.
    - The header shows *Step x of N* and a progress bar; tap it to see the whole lesson plan.
@@ -59,6 +60,7 @@ src/
   ai/                Browser-side calls to /api (retries, streaming, control line)
   files/             Reading files in the browser and splitting them into passages
   components/        UI only: Setup screen, Lesson screen and their parts
+  i18n/              Interface text in English and Hebrew, and the language switch setting
   settings/          The API key field's storage
 eval/                npm run eval: scripted lessons, rule checks and an AI judge
 test-files/          Small files for manual testing
