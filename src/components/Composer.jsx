@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SendIcon, StopIcon } from './icons.jsx'
 
 // One-tap answers for a stuck student (handy on a phone). The tutor's rules already
 // cover each of them: break the idea down, give a hint, explain another way.
@@ -58,16 +59,18 @@ export default function Composer({ status, onSend, onStop }) {
           <button
             type="button"
             onClick={onStop}
-            className="h-11 shrink-0 rounded-xl border border-slate-300 bg-white px-4 font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 font-medium text-slate-700 hover:bg-slate-50"
           >
+            <StopIcon className="size-4" />
             Stop
           </button>
         ) : (
           <button
             type="submit"
             disabled={!canSend}
-            className="h-11 shrink-0 rounded-xl bg-indigo-600 px-4 font-medium text-white hover:bg-indigo-700 disabled:bg-slate-300"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-indigo-600 px-4 font-medium text-white shadow-sm shadow-indigo-600/20 transition-colors hover:bg-indigo-700 disabled:bg-slate-300 disabled:shadow-none"
           >
+            <SendIcon className="size-4" />
             Send
           </button>
         )}

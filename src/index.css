@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* Rubik: friendly and round, and it covers both Latin and Hebrew letters. */
+@theme {
+  --font-sans: "Rubik", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* New chat messages and panels fade in gently. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.rise-in {
+  animation: rise-in 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+  }
+}
+
 /* Rendered markdown in tutor messages and source passages. Each block picks its own
    direction from its first letter, so Hebrew/Arabic and English paragraphs can mix. */
 .markdown {

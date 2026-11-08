@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { sourcePassages } from '../lesson/selectors.js'
 import ApiKeyField from './ApiKeyField.jsx'
 import ChatMessage from './ChatMessage.jsx'
@@ -48,12 +48,18 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
           )}
 
           {messages.map((message, i) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              streaming={status === 'streaming' && i === messages.length - 1}
-              onShowSource={() => setSourceMessage(message)}
-            />
+            <Fragment key={message.id}>
+              {/* A divider where a new step begins, so progress shows in the chat too. */}
+              {message.stepIndex !== messages[i - 1]?.stepIndex && (
+                <StepDivider number={message.stepIndex + 1} title={plan.steps[message.stepIndex].title} />
+              )}
+              <ChatMessage
+                message={message}
+                streaming={status === 'streaming' && i === messages.length - 1}
+                sourceLabel={sourceLabel(sourcePassages(lesson, message))}
+                onShowSource={() => setSourceMessage(message)}
+              />
+            </Fragment>
           ))}
 
           {status === 'done' && <LessonReport lesson={lesson} onNewLesson={onNewLesson} />}
@@ -89,4 +95,23 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
       )}
     </div>
   )
+}
+
+function StepDivider({ number, title }) {
+  return (
+    <div className="flex items-center gap-3 pt-2 text-xs font-medium text-slate-500">
+      <span className="h-px flex-1 bg-slate-200" />
+      <span className="max-w-[75%] truncate rounded-full bg-white px-3 py-1 ring-1 ring-slate-200" dir="auto">
+        Step {number} · {title}
+      </span>
+      <span className="h-px flex-1 bg-slate-200" />
+    </div>
+  )
+}
+
+// "Source · p. 3" so the student sees where in the file an answer comes from.
+function sourceLabel(passages) {
+  const pages = [...new Set(passages.map((p) => p.page).filter((page) => page !== null))]
+  if (pages.length === 0) return 'Source'
+  return pages.length <= 3 ? `Source · p. ${pages.join(', ')}` : `Source · p. ${pages[0]}–${pages.at(-1)}`
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LogoMark } from './icons.jsx'
 
 const SEGMENT_COLORS = {
   done: 'bg-indigo-600',
@@ -19,8 +20,9 @@ export default function LessonHeader({ plan, progress, currentStepIndex, finishe
   return (
     <header className="border-b border-slate-200 bg-white px-4 py-3">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex items-center gap-3">
+          <LogoMark className="hidden size-9 sm:grid" />
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-medium tracking-wide text-indigo-600 uppercase">
               {finished ? 'Lesson complete' : `Step ${currentStepIndex + 1} of ${plan.steps.length}`}
             </p>
