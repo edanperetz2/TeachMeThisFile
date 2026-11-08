@@ -72,6 +72,11 @@ describe('buildChatRequest', () => {
     expect(system).toContain('<<<CONTROL>>>')
   })
 
+  it('reminds the tutor not to answer its own opening question', () => {
+    const note = buildChatRequest(input()).contents.at(-1).parts[0].text
+    expect(note).toContain("don't name or explain its answer")
+  })
+
   it('reminds the tutor not to reveal the answer to a wrong attempt', () => {
     const request = buildChatRequest(input({ opening: false, messages: [{ role: 'student', text: 'a molecule?' }] }))
     expect(request.contents.at(-1).parts[0].text).toContain('do not say the right answer')

@@ -94,6 +94,10 @@ ${documentBlock(passages)}`
 // What this particular turn should do, written as a note from the app.
 function situation({ plan, stepIndex, opening, lastAttempt }) {
   const notes = []
+  if (opening) {
+    // Seen in testing: the opening named the very thing its question then asked for.
+    notes.push("Your question must make the student think: don't name or explain its answer in the same message.")
+  }
   if (opening && stepIndex === 0) {
     notes.push('Start the lesson: greet the student in one short sentence, say in one line what you will explore together, then introduce the first idea of step 1 with a question. Set advance to false.')
   } else if (opening) {
