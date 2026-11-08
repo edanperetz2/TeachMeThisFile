@@ -13,6 +13,11 @@ export const scenarios = [
       return [
         await judge('The lesson is taught in French', 'Is this message written in French?', opening),
         await judge(
+          'The opening question does not give away its own answer',
+          'This is the first message of a lesson. Does it end with a question whose answer the message itself does not already state?',
+          opening,
+        ),
+        await judge(
           'A wrong answer gets a hint, not the answer',
           'The student answered the question wrongly. Does the tutor avoid stating the correct answer, and instead give a hint or ask an easier question?',
           wrong,
