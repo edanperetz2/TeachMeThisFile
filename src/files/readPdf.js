@@ -15,8 +15,8 @@ const IMAGE_OPS = new Set([
   pdfjs.OPS.paintImageMaskXObject,
 ])
 
-const RTL_CHARS = /[֐-ࣿיִ-﷿ﹰ-﻿]/g
-const LTR_CHARS = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]/g
+const RTL_CHARS = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/g
+const LTR_CHARS = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]/g
 
 // → [{ page, text }] from the PDF's own text layer, or [{ page, image }] (a base64
 // JPEG to be read by the AI) for scanned pages that have no usable text layer.
@@ -62,7 +62,14 @@ async function pageText(page) {
     lines.at(-1).push(item)
     if (item.hasEOL) lines.push([])
   }
-  return lines.map(lineText).join('\n')
+  return normalizeArabicForms(lines.map(lineText).join('\n'))
+}
+
+// Some PDFs store Arabic as its drawn letter shapes ("presentation forms", e.g. ﺗﺳﻣﻰ)
+// instead of normal letters (تسمى). They look the same but read badly for the AI, so
+// those characters (and only those: NFKC on everything would turn t² into t2) are mapped back.
+function normalizeArabicForms(text) {
+  return text.replace(/[\uFB50-\uFDFF\uFE70-\uFEFE]/g, (char) => char.normalize('NFKC'))
 }
 
 function lineText(items) {
