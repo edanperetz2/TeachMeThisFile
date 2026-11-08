@@ -42,6 +42,8 @@ npm run eval       # tutor behaviour checks against the running app (needs a key
 
 **Deploy:** the repo is connected to Vercel; every push to `main` deploys. Vercel builds the Vite app as static files and runs each file in `api/` as a Node.js function (`vercel.json` lets `/api/chat` stop when the student presses Stop).
 
+**CI:** GitHub Actions runs `npm test` and `npm run build` on every push (`.github/workflows/ci.yml`).
+
 ## Architecture
 
 Three parts with one job each: the **browser** reads the file and owns the lesson state, the **Vercel functions** hold the prompts and talk to Gemini, and **Gemini** plans, teaches and reads scanned pages. The API key goes from the browser to our functions in a header, for that request only.

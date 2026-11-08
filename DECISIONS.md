@@ -84,7 +84,7 @@ Testing showed that the Flash-Lite model doesn't always follow rules that only a
 - **PDF:** `pdfjs-dist` reads the text layer page by page (its worker is loaded through Vite's `?url` import, checked in the production build). Lines that are mostly Hebrew/Arabic are put back into reading order (pdf.js returns them in drawing order, which scrambled a Hebrew sentence containing "(DNA)"). The logic is a small, unit-tested part of the Unicode bidi rules (`src/files/rtlText.js`): pieces are right-to-left, left-to-right or neutral; a neutral piece (space, punctuation, bracket) goes with left-to-right text only when the letters on both sides are left-to-right, otherwise it belongs to the right-to-left line and its brackets are mirrored; vowel marks drawn as separate pieces are attached to their letter.
 - **Scanned pages:** a page with almost no text **that contains an image** is treated as scanned (a title-only page is not). It is drawn to a canvas and sent as a compressed JPEG (long side 2000 px, ~300–500 KB) to `/api/extract`, 2 pages per request, one request at a time. The OCR prompt asks for the original language and reading order, formulas in LaTeX, tables as Markdown tables, and to ignore instructions written in the image. A batch that fails after retries is skipped and the lesson says which pages are missing.
 - **Arabic** PDFs sometimes store letters as their drawn shapes ("presentation forms"); those characters, and only those, are mapped back to normal letters with NFKC.
-- **Photos** (JPG/PNG/WebP) take the same path. **Word** files use `mammoth`; tables become Markdown tables. **Text/Markdown** is read as is.
+- **Photos** (JPG/PNG/WebP) take the same path. **Word** files use `mammoth`; tables become Markdown tables. **Text/Markdown** is read as UTF-8; a file that isn't valid UTF-8 is tried in the old Windows Hebrew and Arabic encodings (1255 / 1256), and the one that gives real letters wins, so an old Hebrew `.txt` doesn't turn into gibberish.
 - **Why in the browser:** the file never has to be uploaded (only text, or small page images, are sent), which keeps requests far below Vercel's 4.5 MB limit and the server simple.
 - **Very long documents:** the planner gets at most 400,000 characters; above that every passage is shortened equally, so the plan still sees the whole document. This keeps the request under the body limit and the free tier's tokens-per-minute.
 - Empty, binary, password-protected and unsupported files get a clear message instead of a crash.
@@ -112,7 +112,9 @@ The user pastes the key in a settings field. It is kept in **sessionStorage** (g
 
 ### Hosting: Vercel
 
-The Vite build is static; each file in `api/` is a Node.js function. Designed around the Hobby limits (checked in Vercel's docs): **300 s** max duration (plan and OCR calls time out at 240 s and 120 s, chat at 120 s), **4.5 MB** request body (see file reading), and streaming responses for chat. `vercel.json` enables request cancellation for `/api/chat`, so Stop also stops the Gemini call. Every push to `main` deploys.
+The Vite build is static; each file in `api/` is a Node.js function. Designed around the Hobby limits (checked in Vercel's docs): **300 s** max duration (plan and OCR calls time out at 240 s and 120 s, chat at 120 s), **4.5 MB** request body (see file reading), and streaming responses for chat. `vercel.json` enables request cancellation for `/api/chat`, so Stop also stops the Gemini call, and adds basic security headers (`nosniff`, a strict referrer policy, no framing). Every push to `main` deploys, and GitHub Actions runs the unit tests and the production build on every push (`.github/workflows/ci.yml`).
+
+**Streaming you can see.** Replies are streamed end to end (Gemini → function → browser), but the fast Flash-Lite model often delivers a whole reply in a few chunks within 0.1–0.2 s, so it popped in at once. The chat now shows the text it has received at a steady reading pace (about a second for a normal reply, faster when far behind; it never waits for the network). Stop shows everything received so far, reloaded messages appear at once, and "reduce motion" turns it off.
 
 `vercel dev` fails on Windows without symlink rights, so a small dev-only plugin in `vite.config.js` serves `api/*.js` with the same web `Request`/`Response` interface: `npm run dev` runs everything.
 
@@ -129,7 +131,7 @@ The Vite build is static; each file in `api/` is a Node.js function. Designed ar
 
 Not a library, but an outside resource: the **Rubik** font from Google Fonts, chosen because it is friendly and covers both Latin and Hebrew letters (Hebrew lessons look consistent). Icons are a handful of inline SVGs (`src/components/icons.jsx`), so no icon package.
 
-The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded only when needed, so the first page loads ~80 KB of gzipped JS and CSS.
+The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded only when needed, so the first page loads ~90 KB of gzipped JS and CSS.
 
 ## 2. What I decided not to do
 
@@ -157,7 +159,7 @@ The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded onl
 - **The tutor's language follows the plan, the interface's follows the user.** A teacher who keeps the prompt from the last lesson (it is kept after "New lesson") also keeps any language they chose for it.
 - **A forgotten control line costs one extra request** (about 1 reply in 10 before the fix). If that request fails too, that answer doesn't count toward progress.
 - **The eval's judge is itself an AI** and can be wrong, and each check runs once (no repeated runs to measure variance). File reading (PDF, OCR) is not in the eval; it was checked in the browser.
-- **No end-to-end UI tests.** The pure logic has 125 unit tests and the tutor has `npm run eval`; the UI was checked with scripted browser runs (including an emulated phone), not on a real iPhone or Android device.
+- **No end-to-end UI tests.** The pure logic has 129 unit tests and the tutor has `npm run eval`; the UI was checked with scripted browser runs (including an emulated phone), not on a real iPhone or Android device.
 - **Two interface languages only** (English, Hebrew). Arabic or French lessons work, with an English or Hebrew interface around them.
 
 ## 4. What I would do with 4 more hours
@@ -207,9 +209,9 @@ Results: first version **13/13** locally and **12/13** live — one reply had no
 
 Random bytes named `.txt` → "doesn't look like readable text"; blank PDF → "We couldn't find any text"; wrong key → "This Gemini API key was not accepted"; network cut mid-lesson → message kept, Retry continues; key rejected mid-lesson → key field in the error bar; Stop before and during a reply; Source as a bottom sheet (phone) and side drawer (desktop); no horizontal scroll; Hebrew paragraphs right-to-left with formulas left-to-right; the Hebrew interface fully mirrored (bubbles, drawer, progress bar), switching language mid-lesson; an Arabic PDF with English terms inside sentences (language question → Arabic lesson, a hint for a wrong answer, right-to-left text); an Arabic prompt with a Hebrew file (question offers Arabic / Hebrew; "Another language… → Russian" gave a Russian lesson); an emulated iPhone (touch, 16 px inputs so iOS doesn't zoom) uploading a photo of a worksheet.
 
-### Unit tests (`npm test`, 125 tests)
+### Unit tests (`npm test`, 129 tests, also run by CI on every push)
 
-The lesson reducer (advancing, attempts, the 3-try rule, opening turns, Stop, failures, late events), the passage splitter, the control-line parser, plan validation, prompt building and delimiter escaping, OCR batching and skipping, the model fallback, error mapping, client retries, saving and restoring a lesson, the teacher report (in both languages), the server-side control-line fallback, the time budget notes, when to ask about the lesson language, and putting right-to-left PDF lines in reading order (with the pieces pdf.js returned for the test files).
+The lesson reducer (advancing, attempts, the 3-try rule, opening turns, Stop, failures, late events), the passage splitter, the control-line parser, plan validation, prompt building and delimiter escaping, OCR batching and skipping, the model fallback, error mapping, client retries, saving and restoring a lesson, the teacher report (in both languages), the server-side control-line fallback, the time budget notes, when to ask about the lesson language, putting right-to-left PDF lines in reading order (with the pieces pdf.js returned for the test files), and reading Hebrew/Arabic text files in the old Windows encodings.
 
 ### How I worked
 
