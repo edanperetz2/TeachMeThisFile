@@ -34,7 +34,7 @@ ${CONTROL_SENTINEL}{"advance": false, "understood": "no", "passageIds": ["p1"]}
 The student never sees this line.`
 
 export function readChatInput(body) {
-  const { teacherPrompt, plan, stepIndex, progress, passages, messages, opening, lastAttempt } = body ?? {}
+  const { teacherPrompt, plan, stepIndex, progress, passages, messages, opening, lastAttempt, minutesUsed } = body ?? {}
   const valid =
     typeof teacherPrompt === 'string' &&
     Array.isArray(plan?.steps) &&
@@ -56,6 +56,7 @@ export function readChatInput(body) {
     messages: messages.slice(-MAX_MESSAGES).map((m) => ({ role: m.role, text: m.text.slice(0, MAX_MESSAGE_CHARS) })),
     opening: opening === true,
     lastAttempt: lastAttempt === true,
+    minutesUsed: Number.isFinite(minutesUsed) ? minutesUsed : null,
   }
 }
 
@@ -92,8 +93,10 @@ ${documentBlock(passages)}`
 }
 
 // What this particular turn should do, written as a note from the app.
-function situation({ plan, stepIndex, opening, lastAttempt }) {
+function situation({ plan, stepIndex, opening, lastAttempt, minutesUsed }) {
   const notes = []
+  const timeNote = timeSituation(plan, stepIndex, minutesUsed)
+  if (timeNote) notes.push(timeNote)
   if (opening) {
     // Seen in testing: the opening named the very thing its question then asked for.
     notes.push("Your question must make the student think: don't name or explain its answer in the same message.")
@@ -158,6 +161,20 @@ export function ensureControlLine(requestControl) {
       if (control) controller.enqueue(`\n${CONTROL_SENTINEL}${JSON.stringify(control)}`)
     },
   })
+}
+
+// The teacher's time budget ("keep it under 15 minutes"): nothing to say until it's nearly used up.
+function timeSituation(plan, stepIndex, minutesUsed) {
+  const budget = plan.durationMinutes
+  if (!budget || minutesUsed === null) return ''
+  const stepsLeft = plan.steps.length - stepIndex
+  if (minutesUsed >= budget) {
+    return `The ${budget} minutes the teacher planned are used up: keep this short and move on as soon as the student shows understanding.`
+  }
+  if (minutesUsed >= budget * 0.75) {
+    return `About ${budget - minutesUsed} of the teacher's ${budget} minutes are left for ${stepsLeft} step(s): keep your messages short.`
+  }
+  return ''
 }
 
 // Chat history → Gemini contents. Gemini wants turns to alternate and to start and end

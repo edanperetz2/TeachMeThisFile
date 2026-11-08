@@ -7,8 +7,16 @@ const step = (passageIds) => ({ title: 't', objective: 'o', question: 'q', passa
 
 describe('parsePlan', () => {
   it('keeps a valid plan as is', () => {
-    const plan = parsePlan(JSON.stringify({ title: 'Cells', language: 'French', steps: [step(['p1']), step(['p2', 'p3'])] }), passages)
-    expect(plan).toEqual({ title: 'Cells', language: 'French', steps: [step(['p1']), step(['p2', 'p3'])] })
+    const raw = { title: 'Cells', language: 'French', durationMinutes: 15, steps: [step(['p1']), step(['p2', 'p3'])] }
+    expect(parsePlan(JSON.stringify(raw), passages)).toEqual(raw)
+  })
+
+  it('keeps only a positive whole number of minutes', () => {
+    const minutes = (value) => parsePlan(JSON.stringify({ durationMinutes: value, steps: [step(['p1'])] }), passages).durationMinutes
+    expect(minutes(null)).toBeNull()
+    expect(minutes(-5)).toBeNull()
+    expect(minutes('15')).toBeNull()
+    expect(minutes(20)).toBe(20)
   })
 
   it('drops unknown and duplicate passage ids', () => {

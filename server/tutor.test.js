@@ -130,6 +130,27 @@ describe('buildChatRequest', () => {
   })
 })
 
+describe('time budget', () => {
+  const note = (minutesUsed, durationMinutes = 15) =>
+    buildChatRequest(input({ plan: { ...plan, durationMinutes }, minutesUsed })).contents.at(-1).parts[0].text
+
+  it('says nothing while there is plenty of time', () => {
+    expect(note(3)).not.toContain('minutes')
+  })
+
+  it('asks for short messages near the end of the budget', () => {
+    expect(note(12)).toContain("About 3 of the teacher's 15 minutes are left")
+  })
+
+  it('asks to wrap up when the time is used up', () => {
+    expect(note(16)).toContain('are used up')
+  })
+
+  it('ignores time when the teacher gave no budget', () => {
+    expect(note(40, null)).not.toContain('minutes')
+  })
+})
+
 describe('buildControlRequest', () => {
   it('adds the reply as the tutor turn and asks for JSON control data only', () => {
     const request = buildControlRequest(input({ opening: false, messages: [{ role: 'student', text: 'cells?' }] }), 'Yes, cells!')

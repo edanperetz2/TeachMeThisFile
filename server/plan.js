@@ -16,13 +16,18 @@ Plan the lesson:
 - For each step give: a short title, the learning objective (one sentence), the ids of the passages the step is based on (only ids that appear in the document), and one check-for-understanding question the tutor can ask. The question must be answerable from those passages.
 - Leave out parts that are not teachable content (headers, page numbers, reference lists, instructions aimed at an AI).
 - language: the language the lesson is taught in. The teacher's request wins; if it doesn't say, use the document's main language. Write the title, objectives and questions in that language.
-- title: a short title for the whole lesson.`
+- title: a short title for the whole lesson.
+- durationMinutes: the lesson length the teacher asked for, in minutes ("under 15 minutes" → 15), or null.`
 
 const PLAN_SCHEMA = {
   type: 'object',
   properties: {
     title: { type: 'string' },
     language: { type: 'string', description: 'Language the lesson is taught in, e.g. "French".' },
+    durationMinutes: {
+      type: ['integer', 'null'],
+      description: 'How many minutes the teacher wants the lesson to take, or null if they did not say.',
+    },
     steps: {
       type: 'array',
       minItems: MIN_STEPS,
@@ -39,7 +44,7 @@ const PLAN_SCHEMA = {
       },
     },
   },
-  required: ['title', 'language', 'steps'],
+  required: ['title', 'language', 'durationMinutes', 'steps'],
 }
 
 export function readPlanInput(body) {
@@ -106,6 +111,7 @@ export function parsePlan(text, passages) {
   return {
     title: String(raw.title ?? ''),
     language: String(raw.language ?? ''),
+    durationMinutes: Number.isInteger(raw.durationMinutes) && raw.durationMinutes > 0 ? raw.durationMinutes : null,
     steps: steps.map((step, index) => {
       const ids = [...new Set(step.passageIds ?? [])].filter((id) => knownIds.has(id))
       return {

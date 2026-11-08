@@ -8,7 +8,7 @@ const HISTORY_MESSAGES = 10
 
 // What the server needs for one tutor turn, taken from the lesson state.
 // Only the current step's passages are sent: cheaper, and keeps the tutor on topic.
-export function tutorTurnRequest(lesson, studentText) {
+export function tutorTurnRequest(lesson, studentText, now = Date.now()) {
   const step = currentStep(lesson)
   const messages = studentText ? [...lesson.messages, { role: 'student', text: studentText }] : lesson.messages
   return {
@@ -23,6 +23,8 @@ export function tutorTurnRequest(lesson, studentText) {
       .map(({ role, text }) => ({ role, text })),
     opening: !lesson.messages.some((m) => m.role === 'tutor' && m.stepIndex === lesson.currentStepIndex),
     lastAttempt: isLastAttempt(lesson),
+    // Lets the tutor respect the teacher's time budget (the plan's durationMinutes).
+    minutesUsed: lesson.progress[0].startedAt ? Math.floor((now - lesson.progress[0].startedAt) / 60000) : null,
   }
 }
 
