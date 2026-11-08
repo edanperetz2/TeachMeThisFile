@@ -2,6 +2,7 @@ import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { AppError } from '../errors.js'
 import { canvasToJpeg, MAX_IMAGE_SIDE } from './images.js'
+import { lineText, normalizeArabicForms } from './rtlText.js'
 
 // Vite bundles the worker as its own file and gives us its URL (works in dev and in the build).
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -14,9 +15,6 @@ const IMAGE_OPS = new Set([
   pdfjs.OPS.paintInlineImageXObject,
   pdfjs.OPS.paintImageMaskXObject,
 ])
-
-const RTL_CHARS = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/g
-const LTR_CHARS = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]/g
 
 // → [{ page, text }] from the PDF's own text layer, or [{ page, image }] (a base64
 // JPEG to be read by the AI) for scanned pages that have no usable text layer.
@@ -63,34 +61,6 @@ async function pageText(page) {
     if (item.hasEOL) lines.push([])
   }
   return normalizeArabicForms(lines.map(lineText).join('\n'))
-}
-
-// Some PDFs store Arabic as its drawn letter shapes ("presentation forms", e.g. ﺗﺳﻣﻰ)
-// instead of normal letters (تسمى). They look the same but read badly for the AI, so
-// those characters (and only those: NFKC on everything would turn t² into t2) are mapped back.
-function normalizeArabicForms(text) {
-  return text.replace(/[\uFB50-\uFDFF\uFE70-\uFEFE]/g, (char) => char.normalize('NFKC'))
-}
-
-function lineText(items) {
-  const text = items.map((item) => item.str).join('')
-  const rtl = text.match(RTL_CHARS)?.length ?? 0
-  const ltr = text.match(LTR_CHARS)?.length ?? 0
-  if (rtl <= ltr) return text
-
-  // Sort pieces left to right as drawn, group neighbours of the same direction into runs,
-  // then read the runs right to left. An English run like "(", "DNA", ")" keeps its own order.
-  const x = (item) => item.transform[4]
-  const runs = []
-  for (const item of [...items].sort((a, b) => x(a) - x(b))) {
-    const isRtl = item.dir === 'rtl'
-    if (runs.at(-1)?.isRtl === isRtl) runs.at(-1).items.push(item)
-    else runs.push({ isRtl, items: [item] })
-  }
-  return runs
-    .reverse()
-    .map((run) => (run.isRtl ? run.items.reverse() : run.items).map((item) => item.str).join(''))
-    .join('')
 }
 
 async function hasImage(page) {
