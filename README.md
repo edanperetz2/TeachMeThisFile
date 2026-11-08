@@ -12,7 +12,7 @@ Edventure AI Engineer home assignment. Stack: React + Vite + Tailwind (JavaScrip
 1. **Get a free Gemini API key** at [Google AI Studio](https://aistudio.google.com/apikey) → *Create API key*.
 2. Open the app and **pick a file**: PDF (text or scanned), Word (.docx), text/Markdown, or a photo (JPG/PNG/WebP), up to 30 MB.
 3. **Say how it should be taught**, for example: *"Teach this to 7th graders, in French. Be Socratic. Keep it under 15 minutes."* — or tap one of the examples. The tutor follows the language, level, style and time you ask for.
-4. **Paste your key** and press **Start lesson**. The app reads the file (scanned pages are read by the AI, with progress shown) and plans the lesson.
+4. **Paste your key** and press **Start the lesson**. The app reads the file (scanned pages are read by the AI, with progress shown) and plans the lesson.
 5. **The lesson** opens with the tutor's first question. Answer in the chat.
    - The header shows *Step x of N* and a progress bar; tap it to see the whole lesson plan.
    - **Source** under a tutor message shows the passage of your file it is based on (with page number).
