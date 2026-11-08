@@ -39,6 +39,7 @@ export default function App() {
           status={lesson.status}
           error={lesson.error}
           scanProgress={lesson.scanProgress}
+          lastPrompt={lesson.teacherPrompt}
           languageOptions={lesson.pendingPlan && languageQuestion(lesson.pendingPlan)}
           onChooseLanguage={chooseLanguage}
           apiKey={apiKey}

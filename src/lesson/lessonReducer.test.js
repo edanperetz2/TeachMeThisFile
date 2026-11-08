@@ -237,8 +237,8 @@ describe('stop and failures', () => {
   })
 })
 
-it('resets to a fresh lesson', () => {
-  expect(lessonReducer(plannedLesson(), { type: 'RESET' })).toBe(initialLessonState)
+it('resets to a fresh lesson but keeps the teacher prompt', () => {
+  expect(lessonReducer(plannedLesson(), { type: 'RESET' })).toEqual({ ...initialLessonState, teacherPrompt: 'Teach 7th graders' })
 })
 
 it('throws on unknown actions so typos fail loudly', () => {

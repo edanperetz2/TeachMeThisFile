@@ -100,7 +100,8 @@ export function lessonReducer(state, action) {
       return { ...state, status: 'error', error: action.error }
 
     case 'RESET':
-      return initialLessonState
+      // A teacher often tries the same instructions with another file, so they are kept.
+      return { ...initialLessonState, teacherPrompt: state.teacherPrompt }
 
     default:
       throw new Error(`Unknown lesson action: ${action.type}`)

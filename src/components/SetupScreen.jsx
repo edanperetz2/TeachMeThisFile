@@ -14,6 +14,7 @@ export default function SetupScreen({
   status,
   error,
   scanProgress,
+  lastPrompt,
   languageOptions,
   onChooseLanguage,
   apiKey,
@@ -22,7 +23,7 @@ export default function SetupScreen({
 }) {
   const t = useT()
   const [file, setFile] = useState(null)
-  const [teacherPrompt, setTeacherPrompt] = useState('')
+  const [teacherPrompt, setTeacherPrompt] = useState(lastPrompt)
 
   const busy = status === 'extracting' || status === 'planning' || status === 'choosingLanguage'
   const problem = file ? fileProblem(file) : null
