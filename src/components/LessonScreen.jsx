@@ -19,13 +19,31 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
   const closeSource = useCallback(() => setSourceMessage(null), [])
   const { plan, progress, currentStepIndex, messages, status, error } = lesson
   const scroller = useRef(null)
-  const lastText = messages.at(-1)?.text
+  const chat = useRef(null)
+  const following = useRef(true)
 
-  // Follow new text as it streams in, unless the student scrolled up to read.
+  // Follow the chat as it grows (new messages, text appearing, the phone keyboard opening),
+  // unless the student scrolled up to read. onScroll below keeps `following` up to date.
   useEffect(() => {
     const el = scroller.current
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) el.scrollTop = el.scrollHeight
-  }, [messages.length, lastText])
+    const observer = new ResizeObserver(() => {
+      if (following.current) el.scrollTop = el.scrollHeight
+    })
+    observer.observe(el)
+    observer.observe(chat.current)
+    return () => observer.disconnect()
+  }, [])
+
+  // A new message (e.g. the student just sent one) always brings the chat back to the bottom.
+  useEffect(() => {
+    following.current = true
+    scroller.current.scrollTop = scroller.current.scrollHeight
+  }, [messages.length])
+
+  function updateFollowing() {
+    const el = scroller.current
+    following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 200
+  }
 
   // A stray tap on "New lesson" shouldn't throw away a lesson in progress.
   function leaveLesson() {
@@ -42,8 +60,8 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
         onNewLesson={leaveLesson}
       />
 
-      <main ref={scroller} className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="mx-auto max-w-3xl space-y-5">
+      <main ref={scroller} onScroll={updateFollowing} className="flex-1 overflow-y-auto px-4 py-6">
+        <div ref={chat} className="mx-auto max-w-3xl space-y-5">
           {lesson.document.skippedPages.length > 0 && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
               {t.skippedPages(lesson.document.skippedPages.join(', '))}
