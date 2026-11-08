@@ -117,6 +117,49 @@ function situation({ plan, stepIndex, opening, lastAttempt }) {
   return notes.join(' ')
 }
 
+const CONTROL_SCHEMA = {
+  type: 'object',
+  properties: {
+    advance: { type: 'boolean' },
+    understood: { type: 'string', enum: ['yes', 'partial', 'no'] },
+    passageIds: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['advance', 'understood', 'passageIds'],
+}
+
+// For a reply that came without its control line: the same lesson context, the reply
+// itself, and a request for just the control data, as JSON that must match the schema.
+export function buildControlRequest(input, reply) {
+  const messages = [...input.messages, { role: 'tutor', text: reply }]
+  return {
+    systemInstruction: buildChatRequest(input).systemInstruction,
+    contents: chatContents(messages, `${situation(input)} Now give only the control data for your last message.`),
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseJsonSchema: CONTROL_SCHEMA,
+      thinkingConfig: { thinkingLevel: 'LOW' },
+    },
+  }
+}
+
+// Passes the reply through unchanged. If it ended without a control line (models do
+// forget), asks requestControl(reply) for one and appends it, so progress still works.
+// If that fails as well, the reply simply has no control line: the app won't advance.
+export function ensureControlLine(requestControl) {
+  let reply = ''
+  return new TransformStream({
+    transform(chunk, controller) {
+      reply += chunk
+      controller.enqueue(chunk)
+    },
+    async flush(controller) {
+      if (!reply.trim() || reply.includes(CONTROL_SENTINEL)) return
+      const control = await requestControl(reply).catch(() => null)
+      if (control) controller.enqueue(`\n${CONTROL_SENTINEL}${JSON.stringify(control)}`)
+    },
+  })
+}
+
 // Chat history → Gemini contents. Gemini wants turns to alternate and to start and end
 // with the user, so tutor-only stretches are merged and app notes fill the gaps.
 export function chatContents(messages, note) {

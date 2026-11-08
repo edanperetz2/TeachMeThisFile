@@ -1,5 +1,45 @@
-import { describe, expect, it } from 'vitest'
-import { buildChatRequest, chatContents, readChatInput } from './tutor.js'
+import { describe, expect, it, vi } from 'vitest'
+import { buildChatRequest, buildControlRequest, chatContents, ensureControlLine, readChatInput } from './tutor.js'
+
+// Runs text chunks through a TransformStream and returns everything that comes out.
+async function pipe(chunks, transform) {
+  const reader = ReadableStream.from(chunks).pipeThrough(transform).getReader()
+  let out = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) return out
+    out += value
+  }
+}
+
+describe('ensureControlLine', () => {
+  const control = { advance: true, understood: 'yes', passageIds: ['p1'] }
+
+  it('passes a reply with a control line through untouched', async () => {
+    const requestControl = vi.fn()
+    const reply = ['Great! ', '<<<CONTROL>>>{"advance": true}']
+    expect(await pipe(reply, ensureControlLine(requestControl))).toBe(reply.join(''))
+    expect(requestControl).not.toHaveBeenCalled()
+  })
+
+  it('asks for the control data when the model forgot it, and appends it', async () => {
+    const requestControl = vi.fn().mockResolvedValue(control)
+    const out = await pipe(['Great ', 'job!'], ensureControlLine(requestControl))
+    expect(requestControl).toHaveBeenCalledWith('Great job!')
+    expect(out).toBe(`Great job!\n<<<CONTROL>>>${JSON.stringify(control)}`)
+  })
+
+  it('leaves the reply as it is when that request fails too', async () => {
+    const out = await pipe(['Great job!'], ensureControlLine(vi.fn().mockRejectedValue(new Error('busy'))))
+    expect(out).toBe('Great job!')
+  })
+
+  it('does not ask for control data for an empty reply', async () => {
+    const requestControl = vi.fn()
+    await pipe([' '], ensureControlLine(requestControl))
+    expect(requestControl).not.toHaveBeenCalled()
+  })
+})
 
 const plan = {
   title: 'Cells',
@@ -87,6 +127,16 @@ describe('buildChatRequest', () => {
     const note = request.contents.at(-1).parts[0].text
     expect(note).toContain('explain the answer clearly')
     expect(note).toContain('recap')
+  })
+})
+
+describe('buildControlRequest', () => {
+  it('adds the reply as the tutor turn and asks for JSON control data only', () => {
+    const request = buildControlRequest(input({ opening: false, messages: [{ role: 'student', text: 'cells?' }] }), 'Yes, cells!')
+    expect(request.contents.map((c) => c.role)).toEqual(['user', 'model', 'user'])
+    expect(request.contents[1].parts[0].text).toBe('Yes, cells!')
+    expect(request.contents[2].parts[0].text).toContain('give only the control data')
+    expect(request.generationConfig.responseMimeType).toBe('application/json')
   })
 })
 
