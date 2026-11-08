@@ -41,7 +41,7 @@ For a stuck student there are one-tap replies — *I don't know*, *Give me a hin
 
 The user picks the interface language with an **EN | עב** switch on both screens (the first visit follows the browser's language; the choice is a display preference, so it is remembered in localStorage). All interface text lives in `src/i18n/strings.js`; components read it with `useT()`. Hebrew turns the whole page right-to-left: layouts use start/end CSS so chat bubbles, the source drawer and arrows mirror, while the API key field and formulas stay left-to-right, and step titles in another script are isolated with `<bdi>`. Error messages are translated by their code (in English the server's more specific message is shown).
 
-This is separate from the **lesson language**, which follows the teacher's prompt as the assignment asks: an English interface can run a French lesson about a Hebrew file. When the prompt names no language, the lesson uses the file's main language — the teacher chose that material for the class, and it keeps a Hebrew file taught in Hebrew, right-to-left.
+This is separate from the **lesson language**, which follows the teacher's prompt as the assignment asks: an English interface can run a French lesson about a Hebrew file. When the prompt names no language, the planner is told to use the file's main language (the teacher chose that material for the class, and it keeps a Hebrew file taught in Hebrew, right-to-left). In practice the model also treats a prompt *written* in another language as a request for that language (a Hebrew prompt about an English file gave a Hebrew lesson), which is reasonable; the example prompts always name the language, so they behave predictably.
 
 ### How the tutor teaches
 
