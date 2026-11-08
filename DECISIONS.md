@@ -1,5 +1,13 @@
 # Decisions
 
+## In short
+
+- **The file is read in the browser** (PDF text, Word, text; scanned pages and photos through Gemini) and split into numbered passages. The file itself is never uploaded.
+- **One structured plan, then one small streamed turn per message.** The plan (3–8 steps, each tied to passages and a check question) is made once; every tutor turn sees only the current step's passages, so turns stay fast and cheap however long the file is (about 2–3 cents per lesson on a paid key, see Cost).
+- **The app, not the model, owns progress.** A `useReducer` store holds the plan and per-step progress. The model suggests "advance" in a hidden control line; the reducer decides (never on an opening message, always after 3 tries, never on Stop).
+- **Gemini through plain REST**, with a fallback across models so a free key lasts about 50 lessons. The key stays in the browser tab and travels with each request only.
+- **Teaching behaviour is enforced** by rules plus a short note on every turn, and **measured** by `npm run eval` (14/14 checks on the live site).
+
 ## 1. Main choices and why
 
 ### The lesson flow
@@ -75,10 +83,24 @@ Testing showed that the Flash-Lite model doesn't always follow rules that only a
 
 - **PDF:** `pdfjs-dist` reads the text layer page by page (its worker is loaded through Vite's `?url` import, checked in the production build). Lines that are mostly Hebrew/Arabic are put back into reading order (pdf.js returns them in drawing order, which scrambled a Hebrew sentence containing "(DNA)").
 - **Scanned pages:** a page with almost no text **that contains an image** is treated as scanned (a title-only page is not). It is drawn to a canvas and sent as a compressed JPEG (long side 2000 px, ~300–500 KB) to `/api/extract`, 2 pages per request, one request at a time. The OCR prompt asks for the original language and reading order, formulas in LaTeX, tables as Markdown tables, and to ignore instructions written in the image. A batch that fails after retries is skipped and the lesson says which pages are missing.
+- **Arabic** PDFs sometimes store letters as their drawn shapes ("presentation forms"); those characters, and only those, are mapped back to normal letters with NFKC.
 - **Photos** (JPG/PNG/WebP) take the same path. **Word** files use `mammoth`; tables become Markdown tables. **Text/Markdown** is read as is.
 - **Why in the browser:** the file never has to be uploaded (only text, or small page images, are sent), which keeps requests far below Vercel's 4.5 MB limit and the server simple.
 - **Very long documents:** the planner gets at most 400,000 characters; above that every passage is shortened equally, so the plan still sees the whole document. This keeps the request under the body limit and the free tier's tokens-per-minute.
 - Empty, binary, password-protected and unsupported files get a clear message instead of a crash.
+
+### Cost
+
+Measured with Gemini's own token counts (`usageMetadata`), priced at the paid tier of `gemini-3.5-flash-lite` ($0.30 per million input tokens, $2.50 per million output tokens including thinking). On the free tier it all costs $0.
+
+| Call | Tokens in / out | Cost |
+|---|---|---|
+| Plan, short file (650 characters) | 644 / 300 | ≈ $0.001 |
+| Plan, long file (68k characters, ~30 pages) | 13,584 / 382 | ≈ $0.005 |
+| Plan, largest input (400k-character budget) | ≈ 80,000 / ~400 | ≈ $0.025 |
+| One tutor turn (10 messages of history) | 1,228 / 332 | ≈ $0.001 |
+
+A lesson is one plan plus about 15–20 turns, so **about 2–3 cents**, and the turns cost the same for a 1-page and a 300-page file: the file's size only affects the single plan call. Scanned pages add one OCR call per two pages (an image is roughly 1–2k input tokens; not measured precisely). The choices that keep it there: only the current step's passages and the last 10 messages go into a turn; the planner's input is capped; the extra control-line call happens only when the model forgets the line.
 
 ### Errors
 
@@ -126,12 +148,13 @@ The PDF and Word readers and the lesson screen (Markdown + KaTeX) are loaded onl
 - **Free-tier data use.** On Google's free tier, prompts and file contents may be used to improve Google's products. Real school material should use a paid key.
 - **Model quality.** The Flash-Lite models are fast and have the largest free quota, but follow instructions less strictly than bigger models. The reducer and per-turn notes catch the important failures (advancing, giving answers away), but the tutor can still be a bit strict or loose about what counts as "understood".
 - **OCR is not perfect.** In my tests one closing `$$` came back as `$|` and one Hebrew letter was swapped. Handwriting and low-quality scans will be worse. Formulas from a PDF's text layer arrive as plain Unicode (`v = u + a·t`), not LaTeX.
-- **PDF layout.** No paragraph or column detection: multi-column pages, headers and footers can be mixed into the text. Right-to-left lines are reordered with a simple rule that can fail on unusual PDFs.
+- **PDF layout.** No paragraph or column detection: multi-column pages, headers and footers can be mixed into the text. Right-to-left lines are reordered with a simple rule that can fail on unusual PDFs; in an Arabic test file some punctuation next to Latin words landed on the wrong side (e.g. ".(chloroplasts)"). The words and their order are right, and the tutor read it fine, but the Source panel shows it as extracted.
 - **Limits on big files:** at most 30 scanned pages are read (the rest are listed as skipped), and the planner sees at most 400,000 characters of text.
 - **Time is approximate.** The tutor is told when the teacher's time budget is nearly used up, but a student who answers slowly can still run over; the app never cuts a lesson short.
 - **Word files:** equations and images inside .docx are not read.
 - **Prompt-injection defence is prompt-based** (delimiters + instructions). It held in my tests, but it is not a guarantee.
 - **Cold starts / latency:** the first request after a while can take a few extra seconds; replies usually start after 1.5–2 s.
+- **The tutor's language follows the plan, the interface's follows the user.** A teacher who keeps the prompt from the last lesson (it is kept after "New lesson") also keeps any language they chose for it.
 - **A forgotten control line costs one extra request** (about 1 reply in 10 before the fix). If that request fails too, that answer doesn't count toward progress.
 - **The eval's judge is itself an AI** and can be wrong, and each check runs once (no repeated runs to measure variance). File reading (PDF, OCR) is not in the eval; it was checked in the browser.
 - **No end-to-end UI tests.** The pure logic has 117 unit tests and the tutor has `npm run eval`; the UI was checked with scripted browser runs (including an emulated phone), not on a real iPhone or Android device.
@@ -182,7 +205,7 @@ Results: first version **13/13** locally and **12/13** live — one reply had no
 
 ### Error states and UI, checked in the browser (390 px wide)
 
-Random bytes named `.txt` → "doesn't look like readable text"; blank PDF → "We couldn't find any text"; wrong key → "This Gemini API key was not accepted"; network cut mid-lesson → message kept, Retry continues; key rejected mid-lesson → key field in the error bar; Stop before and during a reply; Source as a bottom sheet (phone) and side drawer (desktop); no horizontal scroll; Hebrew paragraphs right-to-left with formulas left-to-right; the Hebrew interface fully mirrored (bubbles, drawer, progress bar), switching language mid-lesson; an emulated iPhone (touch, 16 px inputs so iOS doesn't zoom) uploading a photo of a worksheet.
+Random bytes named `.txt` → "doesn't look like readable text"; blank PDF → "We couldn't find any text"; wrong key → "This Gemini API key was not accepted"; network cut mid-lesson → message kept, Retry continues; key rejected mid-lesson → key field in the error bar; Stop before and during a reply; Source as a bottom sheet (phone) and side drawer (desktop); no horizontal scroll; Hebrew paragraphs right-to-left with formulas left-to-right; the Hebrew interface fully mirrored (bubbles, drawer, progress bar), switching language mid-lesson; an Arabic PDF with English terms inside sentences (language question → Arabic lesson, a hint for a wrong answer, right-to-left text); an emulated iPhone (touch, 16 px inputs so iOS doesn't zoom) uploading a photo of a worksheet.
 
 ### Unit tests (`npm test`, 117 tests)
 

@@ -42,6 +42,58 @@ npm run eval       # tutor behaviour checks against the running app (needs a key
 
 **Deploy:** the repo is connected to Vercel; every push to `main` deploys. Vercel builds the Vite app as static files and runs each file in `api/` as a Node.js function (`vercel.json` lets `/api/chat` stop when the student presses Stop).
 
+## Architecture
+
+Three parts with one job each: the **browser** reads the file and owns the lesson state, the **Vercel functions** hold the prompts and talk to Gemini, and **Gemini** plans, teaches and reads scanned pages. The API key goes from the browser to our functions in a header, for that request only.
+
+```mermaid
+flowchart LR
+  subgraph Browser["Browser, React + Vite"]
+    UI["components/<br/>Setup, Lesson, Source panel"]
+    Hook["lesson/useLesson"]
+    Store["lesson/lessonReducer<br/>plan, progress, messages"]
+    Files["files/<br/>pdf.js, mammoth, passages"]
+    Client["ai/<br/>requests, retries, streaming"]
+    UI -- "calls" --> Hook
+    Hook -- "actions" --> Store
+    Store -- "state" --> UI
+    Hook --> Files
+    Hook --> Client
+  end
+  subgraph Vercel["Vercel functions, Node"]
+    Plan["/api/plan"]
+    Chat["/api/chat, streamed"]
+    Extract["/api/extract, OCR"]
+    Server["server/<br/>prompts, schemas, validation, model fallback"]
+    Plan --> Server
+    Chat --> Server
+    Extract --> Server
+  end
+  Gemini[("Google Gemini<br/>Flash-Lite models")]
+  Client -- "JSON + key header" --> Plan
+  Client --> Chat
+  Client --> Extract
+  Server -- "REST" --> Gemini
+```
+
+One tutor turn: the app sends only what this step needs, streams the reply, and the reducer — not the model — decides whether the student moves on.
+
+```mermaid
+sequenceDiagram
+  participant S as Student
+  participant L as useLesson + reducer
+  participant A as /api/chat
+  participant G as Gemini
+  S->>L: answer
+  L->>A: teacher prompt, plan, current step, its passages, last 10 messages
+  A->>G: streamGenerateContent
+  G-->>A: text chunks
+  A-->>L: text stream, then a hidden control line
+  Note over L: the text is shown as it arrives, the control line is hidden
+  L->>L: TURN_FINISHED: the reducer decides advance / attempts / done
+  L-->>S: reply, progress bar, Source
+```
+
 ## How the code is organised
 
 ```
