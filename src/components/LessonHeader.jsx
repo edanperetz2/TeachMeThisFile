@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useT } from '../i18n/language.js'
 import { LogoMark } from './icons.jsx'
+import LanguageSwitch from './LanguageSwitch.jsx'
 
 const SEGMENT_COLORS = {
   done: 'bg-indigo-600',
@@ -14,6 +16,7 @@ const STEP_MARKERS = {
 }
 
 export default function LessonHeader({ plan, progress, currentStepIndex, finished, onNewLesson }) {
+  const t = useT()
   const [showPlan, setShowPlan] = useState(false)
   const step = plan.steps[currentStepIndex]
 
@@ -24,18 +27,19 @@ export default function LessonHeader({ plan, progress, currentStepIndex, finishe
           <LogoMark className="hidden size-9 sm:grid" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium tracking-wide text-indigo-600 uppercase">
-              {finished ? 'Lesson complete' : `Step ${currentStepIndex + 1} of ${plan.steps.length}`}
+              {finished ? t.lessonComplete : t.stepOf(currentStepIndex + 1, plan.steps.length)}
             </p>
             <h1 className="truncate font-semibold text-slate-900" dir="auto">
               {finished ? plan.title : step.title}
             </h1>
           </div>
+          <LanguageSwitch />
           <button
             type="button"
             onClick={onNewLesson}
             className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            New lesson
+            {t.newLesson}
           </button>
         </div>
 
@@ -56,7 +60,7 @@ export default function LessonHeader({ plan, progress, currentStepIndex, finishe
             ))}
           </span>
           <span className="shrink-0 text-xs font-medium text-slate-500 group-hover:text-slate-900">
-            {showPlan ? 'Hide plan' : 'Plan'}
+            {showPlan ? t.hidePlan : t.showPlan}
           </span>
         </button>
 
@@ -68,7 +72,7 @@ export default function LessonHeader({ plan, progress, currentStepIndex, finishe
                 <li key={i} className="flex items-start gap-3 text-sm">
                   <span
                     className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-xs font-semibold ${marker.className}`}
-                    aria-label={progress[i].status}
+                    aria-label={t.stepStatus[progress[i].status]}
                   >
                     {marker.symbol}
                   </span>

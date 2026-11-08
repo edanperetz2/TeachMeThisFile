@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { ACCEPTED_EXTENSIONS, MAX_FILE_MB } from '../files/fileTypes.js'
+import { useT } from '../i18n/language.js'
 import { BookIcon, UploadIcon } from './icons.jsx'
 
 export default function FilePicker({ file, onChange }) {
+  const t = useT()
   const [dragging, setDragging] = useState(false)
 
   function handleDrop(e) {
@@ -21,7 +23,7 @@ export default function FilePicker({ file, onChange }) {
           <p className="truncate text-sm font-medium text-slate-900" dir="auto">
             {file.name}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500" dir="ltr">
             {file.name.split('.').pop().toUpperCase()} · {formatSize(file.size)}
           </p>
         </div>
@@ -30,7 +32,7 @@ export default function FilePicker({ file, onChange }) {
           onClick={() => onChange(null)}
           className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 hover:bg-white hover:text-slate-900"
         >
-          Change
+          {t.changeFile}
         </button>
       </div>
     )
@@ -58,11 +60,9 @@ export default function FilePicker({ file, onChange }) {
         <UploadIcon className="size-6" />
       </span>
       <span className="text-sm text-slate-700">
-        <span className="font-semibold text-indigo-600">Choose a file</span> or drop it here
+        <span className="font-semibold text-indigo-600">{t.chooseFile}</span> {t.orDrop}
       </span>
-      <span className="text-xs text-slate-500">
-        PDF (also scanned), Word, text or a photo · up to {MAX_FILE_MB} MB
-      </span>
+      <span className="text-xs text-slate-500">{t.fileFormats(MAX_FILE_MB)}</span>
     </label>
   )
 }

@@ -1,13 +1,15 @@
+import { useT } from '../i18n/language.js'
 import { BookIcon, LogoMark } from './icons.jsx'
 import Markdown from './Markdown.jsx'
 
 export default function ChatMessage({ message, streaming, sourceLabel, onShowSource }) {
+  const t = useT()
   if (message.role === 'student') {
     return (
       <div className="rise-in flex justify-end">
         <p
           dir="auto"
-          className="max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 whitespace-pre-wrap text-white shadow-sm [overflow-wrap:anywhere]"
+          className="max-w-[85%] rounded-2xl rounded-ee-md bg-indigo-600 px-4 py-2.5 whitespace-pre-wrap text-white shadow-sm [overflow-wrap:anywhere]"
         >
           {message.text}
         </p>
@@ -17,14 +19,14 @@ export default function ChatMessage({ message, streaming, sourceLabel, onShowSou
 
   // Stopped before any text arrived: nothing to show but a quiet note.
   if (!message.text && !streaming) {
-    return <p className="pl-11 text-xs text-slate-400 italic">Reply stopped</p>
+    return <p className="ps-11 text-xs text-slate-400 italic">{t.replyStopped}</p>
   }
 
   return (
     <div className="rise-in flex items-start gap-2.5">
       <LogoMark className="mt-0.5 size-8.5" />
       <div className="max-w-[88%] min-w-0">
-        <div className="rounded-2xl rounded-tl-md border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm">
+        <div className="rounded-2xl rounded-ss-md border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm">
           {message.text ? <Markdown>{message.text}</Markdown> : <Thinking />}
         </div>
 
@@ -38,7 +40,7 @@ export default function ChatMessage({ message, streaming, sourceLabel, onShowSou
               <BookIcon className="size-3.5" />
               {sourceLabel}
             </button>
-            {message.stopped && <span className="text-slate-400 italic">Stopped</span>}
+            {message.stopped && <span className="text-slate-400 italic">{t.stopped}</span>}
           </div>
         )}
       </div>
@@ -47,6 +49,7 @@ export default function ChatMessage({ message, streaming, sourceLabel, onShowSou
 }
 
 function Thinking() {
+  const t = useT()
   return (
     <div className="flex items-center gap-2 py-0.5 text-sm text-slate-500" role="status">
       <span className="flex gap-1">
@@ -58,7 +61,7 @@ function Thinking() {
           />
         ))}
       </span>
-      Tutor is thinking…
+      {t.thinking}
     </div>
   )
 }

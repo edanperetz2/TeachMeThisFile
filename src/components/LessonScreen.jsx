@@ -1,4 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { useT } from '../i18n/language.js'
+import { errorText } from '../i18n/strings.js'
 import { sourcePassages } from '../lesson/selectors.js'
 import ApiKeyField from './ApiKeyField.jsx'
 import ChatMessage from './ChatMessage.jsx'
@@ -12,6 +14,7 @@ import SourcePanel from './SourcePanel.jsx'
 const KEY_ERRORS = ['INVALID_KEY', 'QUOTA_EXCEEDED']
 
 export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, onStop, onRetry, onNewLesson }) {
+  const t = useT()
   const [sourceMessage, setSourceMessage] = useState(null)
   const closeSource = useCallback(() => setSourceMessage(null), [])
   const { plan, progress, currentStepIndex, messages, status, error } = lesson
@@ -26,7 +29,7 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
 
   // A stray tap on "New lesson" shouldn't throw away a lesson in progress.
   function leaveLesson() {
-    if (status === 'done' || window.confirm('Leave this lesson? Your progress will be lost.')) onNewLesson()
+    if (status === 'done' || window.confirm(t.leaveConfirm)) onNewLesson()
   }
 
   return (
@@ -43,8 +46,7 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
         <div className="mx-auto max-w-3xl space-y-5">
           {lesson.document.skippedPages.length > 0 && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
-              Some scanned pages couldn&apos;t be read and are not part of this lesson: page{' '}
-              {lesson.document.skippedPages.join(', ')}.
+              {t.skippedPages(lesson.document.skippedPages.join(', '))}
             </p>
           )}
 
@@ -52,12 +54,12 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
             <Fragment key={message.id}>
               {/* A divider where a new step begins, so progress shows in the chat too. */}
               {message.stepIndex !== messages[i - 1]?.stepIndex && (
-                <StepDivider number={message.stepIndex + 1} title={plan.steps[message.stepIndex].title} />
+                <StepDivider label={t.stepDivider(message.stepIndex + 1, plan.steps[message.stepIndex].title)} />
               )}
               <ChatMessage
                 message={message}
                 streaming={status === 'streaming' && i === messages.length - 1}
-                sourceLabel={sourceLabel(sourcePassages(lesson, message))}
+                sourceLabel={sourceLabel(t, sourcePassages(lesson, message))}
                 onShowSource={() => setSourceMessage(message)}
               />
             </Fragment>
@@ -75,14 +77,14 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
               className="mx-auto mb-3 max-w-3xl space-y-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800"
             >
               <div className="flex items-center justify-between gap-3">
-                <span>{error.message}</span>
+                <span>{errorText(t, error)}</span>
                 <button
                   type="button"
                   onClick={onRetry}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1 font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
                 >
                   <RetryIcon className="size-4" />
-                  Retry
+                  {t.retry}
                 </button>
               </div>
               {KEY_ERRORS.includes(error.code) && <ApiKeyField value={apiKey} onChange={onApiKeyChange} />}
@@ -99,12 +101,12 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
   )
 }
 
-function StepDivider({ number, title }) {
+function StepDivider({ label }) {
   return (
     <div className="flex items-center gap-3 pt-2 text-xs font-medium text-slate-500">
       <span className="h-px flex-1 bg-slate-200" />
       <span className="max-w-[75%] truncate rounded-full bg-white px-3 py-1 ring-1 ring-slate-200" dir="auto">
-        Step {number} · {title}
+        {label}
       </span>
       <span className="h-px flex-1 bg-slate-200" />
     </div>
@@ -112,8 +114,8 @@ function StepDivider({ number, title }) {
 }
 
 // "Source · p. 3" so the student sees where in the file an answer comes from.
-function sourceLabel(passages) {
+function sourceLabel(t, passages) {
   const pages = [...new Set(passages.map((p) => p.page).filter((page) => page !== null))]
-  if (pages.length === 0) return 'Source'
-  return pages.length <= 3 ? `Source · p. ${pages.join(', ')}` : `Source · p. ${pages[0]}–${pages.at(-1)}`
+  if (pages.length === 0) return t.source
+  return t.sourcePages(pages.length <= 3 ? pages.join(', ') : `${pages[0]}–${pages.at(-1)}`)
 }

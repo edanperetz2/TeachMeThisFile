@@ -1,24 +1,26 @@
 import { useState } from 'react'
+import { useT } from '../i18n/language.js'
 import { lessonReport, reportText } from '../lesson/report.js'
 import { CheckIcon, CopyIcon, TrophyIcon } from './icons.jsx'
 
 const BADGE_COLORS = {
-  Understood: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  Partly: 'bg-amber-50 text-amber-700 ring-amber-200',
-  'Not yet': 'bg-rose-50 text-rose-700 ring-rose-200',
+  yes: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  partial: 'bg-amber-50 text-amber-700 ring-amber-200',
+  no: 'bg-rose-50 text-rose-700 ring-rose-200',
 }
 
 // Shown when the lesson is complete: how each step went, for the teacher.
 export default function LessonReport({ lesson, onNewLesson }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
   const { steps, totalMinutes } = lessonReport(lesson)
 
   async function copySummary() {
     try {
-      await navigator.clipboard.writeText(reportText(lesson))
+      await navigator.clipboard.writeText(reportText(lesson, t))
       setCopied(true)
     } catch {
-      setCopied(false) // clipboard blocked: the table is still on screen
+      setCopied(false) // clipboard blocked: the report is still on screen
     }
   }
 
@@ -28,10 +30,8 @@ export default function LessonReport({ lesson, onNewLesson }) {
         <span className="mx-auto mb-2 grid size-12 place-items-center rounded-full bg-amber-100 text-amber-600">
           <TrophyIcon className="size-6" />
         </span>
-        <p className="text-lg font-semibold text-indigo-900">Lesson complete</p>
-        <p className="mt-1 text-sm text-indigo-800">
-          All {steps.length} steps done{totalMinutes === null ? '' : ` in about ${totalMinutes} min`}. Nice work!
-        </p>
+        <p className="text-lg font-semibold text-indigo-900">{t.lessonComplete}</p>
+        <p className="mt-1 text-sm text-indigo-800">{t.reportSummary(steps.length, totalMinutes)}</p>
       </div>
 
       <ol className="mt-4 divide-y divide-slate-100 rounded-xl bg-white ring-1 ring-slate-200">
@@ -42,14 +42,14 @@ export default function LessonReport({ lesson, onNewLesson }) {
                 {i + 1}. {s.title}
               </p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {s.attempts} {s.attempts === 1 ? 'answer' : 'answers'}
-                {s.minutes === null ? '' : ` · ${s.minutes} min`}
+                {t.answers(s.attempts)}
+                {s.minutes === null ? '' : ` · ${t.minutes(s.minutes)}`}
               </p>
             </div>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${BADGE_COLORS[s.understood] ?? 'text-slate-500 ring-slate-200'}`}
             >
-              {s.understood}
+              {t.understood[s.understood] ?? '—'}
             </span>
           </li>
         ))}
@@ -62,14 +62,14 @@ export default function LessonReport({ lesson, onNewLesson }) {
           className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-300 bg-white px-4 py-2.5 font-medium text-indigo-700 hover:bg-indigo-100"
         >
           {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-          {copied ? 'Copied' : 'Copy summary for the teacher'}
+          {copied ? t.copied : t.copySummary}
         </button>
         <button
           type="button"
           onClick={onNewLesson}
           className="rounded-xl bg-indigo-600 px-4 py-2.5 font-medium text-white hover:bg-indigo-700"
         >
-          Start a new lesson
+          {t.startNewLesson}
         </button>
       </div>
     </section>

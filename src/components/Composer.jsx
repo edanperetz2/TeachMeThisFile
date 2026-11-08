@@ -1,11 +1,9 @@
 import { useState } from 'react'
+import { useT } from '../i18n/language.js'
 import { SendIcon, StopIcon } from './icons.jsx'
 
-// One-tap answers for a stuck student (handy on a phone). The tutor's rules already
-// cover each of them: break the idea down, give a hint, explain another way.
-const QUICK_REPLIES = ["I don't know", 'Give me a hint', 'Explain it differently']
-
 export default function Composer({ status, onSend, onStop }) {
+  const t = useT()
   const [text, setText] = useState('')
   const streaming = status === 'streaming'
   const canSend = status === 'idle' && text.trim() !== ''
@@ -18,9 +16,11 @@ export default function Composer({ status, onSend, onStop }) {
 
   return (
     <div className="mx-auto max-w-3xl">
+      {/* One-tap answers for a stuck student (handy on a phone). The tutor's rules already
+          cover each of them: break the idea down, give a hint, explain another way. */}
       {status === 'idle' && (
         <div className="mb-2 flex flex-wrap gap-1.5">
-          {QUICK_REPLIES.map((reply) => (
+          {t.quickReplies.map((reply) => (
             <button
               key={reply}
               type="button"
@@ -49,8 +49,8 @@ export default function Composer({ status, onSend, onStop }) {
               send()
             }
           }}
-          placeholder="Type your answer…"
-          aria-label="Your answer"
+          placeholder={t.answerPlaceholder}
+          aria-label={t.answerLabel}
           rows={1}
           dir="auto"
           className="field-sizing-content max-h-40 min-h-11 flex-1 resize-none rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
@@ -62,7 +62,7 @@ export default function Composer({ status, onSend, onStop }) {
             className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 font-medium text-slate-700 hover:bg-slate-50"
           >
             <StopIcon className="size-4" />
-            Stop
+            {t.stop}
           </button>
         ) : (
           <button
@@ -71,7 +71,7 @@ export default function Composer({ status, onSend, onStop }) {
             className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-indigo-600 px-4 font-medium text-white shadow-sm shadow-indigo-600/20 transition-colors hover:bg-indigo-700 disabled:bg-slate-300 disabled:shadow-none"
           >
             <SendIcon className="size-4" />
-            Send
+            {t.send}
           </button>
         )}
       </form>

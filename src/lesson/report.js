@@ -1,14 +1,13 @@
 // The end-of-lesson report for the teacher, built only from the lesson state.
 
-const UNDERSTOOD_LABELS = { yes: 'Understood', partial: 'Partly', no: 'Not yet' }
-
+// → { steps: [{ title, attempts, understood: 'yes' | 'partial' | 'no' | null, minutes }], totalMinutes }
 export function lessonReport(lesson) {
   const steps = lesson.plan.steps.map((step, i) => {
     const p = lesson.progress[i]
     return {
       title: step.title,
       attempts: p.attempts,
-      understood: UNDERSTOOD_LABELS[p.understood] ?? '—',
+      understood: p.understood,
       minutes: p.startedAt != null && p.finishedAt != null ? minutesBetween(p.startedAt, p.finishedAt) : null,
     }
   })
@@ -17,15 +16,18 @@ export function lessonReport(lesson) {
   return { steps, totalMinutes: first != null && last != null ? minutesBetween(first, last) : null }
 }
 
-// Plain text the teacher can paste anywhere (email, LMS, notes).
-export function reportText(lesson) {
+// Plain text the teacher can paste anywhere (email, LMS, notes), in the interface language t.
+export function reportText(lesson, t) {
   const { steps, totalMinutes } = lessonReport(lesson)
-  const lines = steps.map(
-    (s, i) =>
-      `${i + 1}. ${s.title}: ${s.understood}, ${s.attempts} answer(s)${s.minutes === null ? '' : `, ${s.minutes} min`}`,
+  const lines = steps.map((s, i) => {
+    const details = [t.understood[s.understood] ?? '—', t.answers(s.attempts)]
+    if (s.minutes !== null) details.push(t.minutes(s.minutes))
+    return `${i + 1}. ${s.title}: ${details.join(', ')}`
+  })
+  const total = totalMinutes === null ? '' : ` (${t.minutes(totalMinutes)})`
+  return [`${t.summaryLesson}: ${lesson.plan.title}${total}`, `${t.summaryFile}: ${lesson.document.fileName}`, ...lines].join(
+    '\n',
   )
-  const total = totalMinutes === null ? '' : ` (${totalMinutes} min)`
-  return [`Lesson: ${lesson.plan.title}${total}`, `File: ${lesson.document.fileName}`, ...lines].join('\n')
 }
 
 function minutesBetween(start, end) {
