@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { BookIcon } from './icons.jsx'
 import Markdown from './Markdown.jsx'
 
 // The passages behind a tutor message: a bottom sheet on phones, a side drawer on wider screens.
@@ -19,10 +20,11 @@ export default function SourcePanel({ passages, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="source-title"
-        className="absolute inset-x-0 bottom-0 flex max-h-[75dvh] flex-col rounded-t-2xl bg-white shadow-xl sm:inset-y-0 sm:right-0 sm:left-auto sm:max-h-none sm:w-[26rem] sm:rounded-none"
+        className="rise-in absolute inset-x-0 bottom-0 flex max-h-[75dvh] flex-col rounded-t-2xl bg-white shadow-xl sm:inset-y-0 sm:right-0 sm:left-auto sm:max-h-none sm:w-[26rem] sm:rounded-none"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h2 id="source-title" className="font-semibold text-slate-900">
+          <h2 id="source-title" className="flex items-center gap-2 font-semibold text-slate-900">
+            <BookIcon className="size-5 text-indigo-600" />
             From your file
           </h2>
           <button

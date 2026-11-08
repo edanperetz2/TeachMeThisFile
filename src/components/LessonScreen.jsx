@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { sourcePassages } from '../lesson/selectors.js'
 import ApiKeyField from './ApiKeyField.jsx'
 import ChatMessage from './ChatMessage.jsx'
+import { RetryIcon } from './icons.jsx'
 import Composer from './Composer.jsx'
 import LessonHeader from './LessonHeader.jsx'
 import LessonReport from './LessonReport.jsx'
@@ -78,8 +79,9 @@ export default function LessonScreen({ lesson, apiKey, onApiKeyChange, onSend, o
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="shrink-0 rounded-lg bg-white px-3 py-1 font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1 font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
                 >
+                  <RetryIcon className="size-4" />
                   Retry
                 </button>
               </div>
